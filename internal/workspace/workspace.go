@@ -44,6 +44,8 @@ type worktrees interface {
 	CreateWorktree(ctx context.Context, name, branch string) (*git.Worktree, error)
 	RemoveWorktree(ctx context.Context, name string) error
 	ListWorktrees(ctx context.Context) ([]*git.Worktree, error)
+	CommitWorktree(ctx context.Context, worktreePath, message string) (string, error)
+	PushWorktree(ctx context.Context, worktreePath, branch, remote string) error
 }
 
 // workspaceStore is the slice of the store the manager needs. *store.Store
@@ -121,6 +123,33 @@ func (m *Manager) List(ctx context.Context) ([]*Workspace, error) {
 		out[i] = fromRow(row)
 	}
 	return out, nil
+}
+
+// Commit stages and commits all changes in the workspace's worktree, returning
+// the new commit's short hash. It is a convenience over raw git so an agent
+// driving Mesh need not locate the worktree path itself.
+func (m *Manager) Commit(ctx context.Context, id, message string) (string, error) {
+	ws, err := m.store.GetWorkspace(ctx, id)
+	if err != nil {
+		return "", fmt.Errorf("workspace.Commit: %w", err)
+	}
+	hash, err := m.wt.CommitWorktree(ctx, ws.Path, message)
+	if err != nil {
+		return "", fmt.Errorf("workspace.Commit: %w", err)
+	}
+	return hash, nil
+}
+
+// Push pushes the workspace's branch to the given remote (default "origin").
+func (m *Manager) Push(ctx context.Context, id, remote string) error {
+	ws, err := m.store.GetWorkspace(ctx, id)
+	if err != nil {
+		return fmt.Errorf("workspace.Push: %w", err)
+	}
+	if err := m.wt.PushWorktree(ctx, ws.Path, ws.Branch, remote); err != nil {
+		return fmt.Errorf("workspace.Push: %w", err)
+	}
+	return nil
 }
 
 // Finish marks a workspace terminal (done or error) and reclaims its worktree.

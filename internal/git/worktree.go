@@ -147,11 +147,48 @@ func (r *Repo) ChangedFiles(ctx context.Context, base, branch string) ([]string,
 	return files, nil
 }
 
-// runGit runs a git subcommand in the repository's working tree and returns its
-// stdout. Stderr is folded into the returned error so failures are diagnosable.
+// CommitWorktree stages every change in the worktree at worktreePath and
+// records a commit. It returns the new commit's short hash.
+//
+// This is a convenience wrapper over raw git for agents driving the CLI: the
+// underlying storage stays standard git (CLAUDE.md "not a git replacement"), we
+// just run the commands in the right worktree so the caller need not cd around.
+func (r *Repo) CommitWorktree(ctx context.Context, worktreePath, message string) (string, error) {
+	if _, err := r.runGitIn(ctx, worktreePath, "add", "-A"); err != nil {
+		return "", fmt.Errorf("git.CommitWorktree: %w", err)
+	}
+	if _, err := r.runGitIn(ctx, worktreePath, "commit", "-m", message); err != nil {
+		return "", fmt.Errorf("git.CommitWorktree: %w", err)
+	}
+	out, err := r.runGitIn(ctx, worktreePath, "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("git.CommitWorktree: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// PushWorktree pushes branch from the worktree at worktreePath to remote,
+// setting upstream. remote defaults to "origin" when empty.
+func (r *Repo) PushWorktree(ctx context.Context, worktreePath, branch, remote string) error {
+	if remote == "" {
+		remote = "origin"
+	}
+	if _, err := r.runGitIn(ctx, worktreePath, "push", "--set-upstream", remote, branch); err != nil {
+		return fmt.Errorf("git.PushWorktree: %w", err)
+	}
+	return nil
+}
+
+// runGit runs a git subcommand in the repository's main working tree.
 func (r *Repo) runGit(ctx context.Context, args ...string) ([]byte, error) {
+	return r.runGitIn(ctx, r.dir, args...)
+}
+
+// runGitIn runs a git subcommand in dir and returns its stdout. Stderr is
+// folded into the returned error so failures are diagnosable.
+func (r *Repo) runGitIn(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = r.dir
+	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

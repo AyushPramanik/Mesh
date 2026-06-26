@@ -63,7 +63,70 @@ func workspaceCmd() *cobra.Command {
 		Aliases: []string{"ws"},
 		Short:   "Manage agent workspaces",
 	}
-	cmd.AddCommand(workspaceListCmd(), workspaceCreateCmd(), workspaceFinishCmd(), workspaceRmCmd())
+	cmd.AddCommand(
+		workspaceListCmd(),
+		workspaceCreateCmd(),
+		workspaceCommitCmd(),
+		workspacePushCmd(),
+		workspaceFinishCmd(),
+		workspaceRmCmd(),
+	)
+	return cmd
+}
+
+func workspaceCommitCmd() *cobra.Command {
+	var message string
+	cmd := &cobra.Command{
+		Use:   "commit <id>",
+		Short: "Stage and commit all changes in a workspace's worktree",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			res, err := client.CommitWorkspace(cmd.Context(), &meshv1.CommitWorkspaceRequest{
+				Id:      args[0],
+				Message: message,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "committed %s\n", res.GetCommitHash())
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&message, "message", "m", "", "commit message (required)")
+	_ = cmd.MarkFlagRequired("message")
+	return cmd
+}
+
+func workspacePushCmd() *cobra.Command {
+	var remote string
+	cmd := &cobra.Command{
+		Use:   "push <id>",
+		Short: "Push a workspace's branch to its remote",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			if _, err := client.PushWorkspace(cmd.Context(), &meshv1.PushWorkspaceRequest{
+				Id:     args[0],
+				Remote: remote,
+			}); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "pushed %s\n", args[0])
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&remote, "remote", "", "remote to push to (default: origin)")
 	return cmd
 }
 

@@ -75,6 +75,19 @@ func TestCreate_UnknownAgentRollsBackWorktree(t *testing.T) {
 	assert.Empty(t, list, "worktree must be rolled back when the row insert fails")
 }
 
+func TestCommit_CommitsWorktreeChanges(t *testing.T) {
+	m, _, agent := setup(t)
+	ctx := context.Background()
+
+	ws, err := m.Create(ctx, agent)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(ws.Path, "agent-output.txt"), []byte("done"), 0o644))
+	hash, err := m.Commit(ctx, ws.ID, "agent work")
+	require.NoError(t, err)
+	assert.NotEmpty(t, hash)
+}
+
 func TestFinish_ReclaimsWorktreeKeepsRow(t *testing.T) {
 	m, repo, agent := setup(t)
 	ctx := context.Background()

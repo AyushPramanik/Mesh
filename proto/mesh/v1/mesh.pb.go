@@ -496,6 +496,191 @@ func (x *FinishWorkspaceRequest) GetErrored() bool {
 	return false
 }
 
+type CommitWorkspaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommitWorkspaceRequest) Reset() {
+	*x = CommitWorkspaceRequest{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommitWorkspaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommitWorkspaceRequest) ProtoMessage() {}
+
+func (x *CommitWorkspaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommitWorkspaceRequest.ProtoReflect.Descriptor instead.
+func (*CommitWorkspaceRequest) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CommitWorkspaceRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CommitWorkspaceRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type CommitWorkspaceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CommitHash    string                 `protobuf:"bytes,1,opt,name=commit_hash,json=commitHash,proto3" json:"commit_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommitWorkspaceResponse) Reset() {
+	*x = CommitWorkspaceResponse{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommitWorkspaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommitWorkspaceResponse) ProtoMessage() {}
+
+func (x *CommitWorkspaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommitWorkspaceResponse.ProtoReflect.Descriptor instead.
+func (*CommitWorkspaceResponse) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CommitWorkspaceResponse) GetCommitHash() string {
+	if x != nil {
+		return x.CommitHash
+	}
+	return ""
+}
+
+type PushWorkspaceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Remote to push to; defaults to "origin" when empty.
+	Remote        string `protobuf:"bytes,2,opt,name=remote,proto3" json:"remote,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PushWorkspaceRequest) Reset() {
+	*x = PushWorkspaceRequest{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PushWorkspaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PushWorkspaceRequest) ProtoMessage() {}
+
+func (x *PushWorkspaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PushWorkspaceRequest.ProtoReflect.Descriptor instead.
+func (*PushWorkspaceRequest) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PushWorkspaceRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PushWorkspaceRequest) GetRemote() string {
+	if x != nil {
+		return x.Remote
+	}
+	return ""
+}
+
+type PushWorkspaceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PushWorkspaceResponse) Reset() {
+	*x = PushWorkspaceResponse{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PushWorkspaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PushWorkspaceResponse) ProtoMessage() {}
+
+func (x *PushWorkspaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PushWorkspaceResponse.ProtoReflect.Descriptor instead.
+func (*PushWorkspaceResponse) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{9}
+}
+
 type DeleteWorkspaceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -505,7 +690,7 @@ type DeleteWorkspaceRequest struct {
 
 func (x *DeleteWorkspaceRequest) Reset() {
 	*x = DeleteWorkspaceRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[6]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -517,7 +702,7 @@ func (x *DeleteWorkspaceRequest) String() string {
 func (*DeleteWorkspaceRequest) ProtoMessage() {}
 
 func (x *DeleteWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[6]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -530,7 +715,7 @@ func (x *DeleteWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{6}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteWorkspaceRequest) GetId() string {
@@ -548,7 +733,7 @@ type DeleteWorkspaceResponse struct {
 
 func (x *DeleteWorkspaceResponse) Reset() {
 	*x = DeleteWorkspaceResponse{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[7]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -560,7 +745,7 @@ func (x *DeleteWorkspaceResponse) String() string {
 func (*DeleteWorkspaceResponse) ProtoMessage() {}
 
 func (x *DeleteWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[7]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -573,7 +758,7 @@ func (x *DeleteWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{7}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{11}
 }
 
 type ReclaimWorktreesRequest struct {
@@ -584,7 +769,7 @@ type ReclaimWorktreesRequest struct {
 
 func (x *ReclaimWorktreesRequest) Reset() {
 	*x = ReclaimWorktreesRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[8]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -596,7 +781,7 @@ func (x *ReclaimWorktreesRequest) String() string {
 func (*ReclaimWorktreesRequest) ProtoMessage() {}
 
 func (x *ReclaimWorktreesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[8]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -609,7 +794,7 @@ func (x *ReclaimWorktreesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReclaimWorktreesRequest.ProtoReflect.Descriptor instead.
 func (*ReclaimWorktreesRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{8}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{12}
 }
 
 type ReclaimedWorktree struct {
@@ -621,7 +806,7 @@ type ReclaimedWorktree struct {
 
 func (x *ReclaimedWorktree) Reset() {
 	*x = ReclaimedWorktree{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[9]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +818,7 @@ func (x *ReclaimedWorktree) String() string {
 func (*ReclaimedWorktree) ProtoMessage() {}
 
 func (x *ReclaimedWorktree) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[9]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +831,7 @@ func (x *ReclaimedWorktree) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReclaimedWorktree.ProtoReflect.Descriptor instead.
 func (*ReclaimedWorktree) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{9}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ReclaimedWorktree) GetName() string {
@@ -667,7 +852,7 @@ type Conflict struct {
 
 func (x *Conflict) Reset() {
 	*x = Conflict{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[10]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +864,7 @@ func (x *Conflict) String() string {
 func (*Conflict) ProtoMessage() {}
 
 func (x *Conflict) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[10]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +877,7 @@ func (x *Conflict) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conflict.ProtoReflect.Descriptor instead.
 func (*Conflict) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{10}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Conflict) GetWorkspaceId() string {
@@ -719,7 +904,7 @@ type Decision struct {
 
 func (x *Decision) Reset() {
 	*x = Decision{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[11]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +916,7 @@ func (x *Decision) String() string {
 func (*Decision) ProtoMessage() {}
 
 func (x *Decision) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[11]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +929,7 @@ func (x *Decision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Decision.ProtoReflect.Descriptor instead.
 func (*Decision) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{11}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Decision) GetVerdict() Verdict {
@@ -771,7 +956,7 @@ type CheckIntentRequest struct {
 
 func (x *CheckIntentRequest) Reset() {
 	*x = CheckIntentRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[12]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -783,7 +968,7 @@ func (x *CheckIntentRequest) String() string {
 func (*CheckIntentRequest) ProtoMessage() {}
 
 func (x *CheckIntentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[12]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -796,7 +981,7 @@ func (x *CheckIntentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckIntentRequest.ProtoReflect.Descriptor instead.
 func (*CheckIntentRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{12}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CheckIntentRequest) GetWorkspaceId() string {
@@ -823,7 +1008,7 @@ type RegisterIntentRequest struct {
 
 func (x *RegisterIntentRequest) Reset() {
 	*x = RegisterIntentRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[13]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -835,7 +1020,7 @@ func (x *RegisterIntentRequest) String() string {
 func (*RegisterIntentRequest) ProtoMessage() {}
 
 func (x *RegisterIntentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[13]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +1033,7 @@ func (x *RegisterIntentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterIntentRequest.ProtoReflect.Descriptor instead.
 func (*RegisterIntentRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{13}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RegisterIntentRequest) GetWorkspaceId() string {
@@ -875,7 +1060,7 @@ type RegisterIntentResponse struct {
 
 func (x *RegisterIntentResponse) Reset() {
 	*x = RegisterIntentResponse{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[14]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +1072,7 @@ func (x *RegisterIntentResponse) String() string {
 func (*RegisterIntentResponse) ProtoMessage() {}
 
 func (x *RegisterIntentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[14]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,7 +1085,7 @@ func (x *RegisterIntentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterIntentResponse.ProtoReflect.Descriptor instead.
 func (*RegisterIntentResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{14}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RegisterIntentResponse) GetIntentId() string {
@@ -932,7 +1117,7 @@ type PullRequest struct {
 
 func (x *PullRequest) Reset() {
 	*x = PullRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[15]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -944,7 +1129,7 @@ func (x *PullRequest) String() string {
 func (*PullRequest) ProtoMessage() {}
 
 func (x *PullRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[15]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -957,7 +1142,7 @@ func (x *PullRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PullRequest.ProtoReflect.Descriptor instead.
 func (*PullRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{15}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PullRequest) GetId() string {
@@ -1021,7 +1206,7 @@ type SubmitPRRequest struct {
 
 func (x *SubmitPRRequest) Reset() {
 	*x = SubmitPRRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[16]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1033,7 +1218,7 @@ func (x *SubmitPRRequest) String() string {
 func (*SubmitPRRequest) ProtoMessage() {}
 
 func (x *SubmitPRRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[16]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1046,7 +1231,7 @@ func (x *SubmitPRRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitPRRequest.ProtoReflect.Descriptor instead.
 func (*SubmitPRRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{16}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SubmitPRRequest) GetWorkspaceId() string {
@@ -1086,7 +1271,7 @@ type ListPRsRequest struct {
 
 func (x *ListPRsRequest) Reset() {
 	*x = ListPRsRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[17]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +1283,7 @@ func (x *ListPRsRequest) String() string {
 func (*ListPRsRequest) ProtoMessage() {}
 
 func (x *ListPRsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[17]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +1296,7 @@ func (x *ListPRsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPRsRequest.ProtoReflect.Descriptor instead.
 func (*ListPRsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{17}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListPRsRequest) GetStatus() PRStatus {
@@ -1129,7 +1314,7 @@ type PlanTrainsRequest struct {
 
 func (x *PlanTrainsRequest) Reset() {
 	*x = PlanTrainsRequest{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1141,7 +1326,7 @@ func (x *PlanTrainsRequest) String() string {
 func (*PlanTrainsRequest) ProtoMessage() {}
 
 func (x *PlanTrainsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1154,7 +1339,7 @@ func (x *PlanTrainsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanTrainsRequest.ProtoReflect.Descriptor instead.
 func (*PlanTrainsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{18}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{22}
 }
 
 // A Train is a batch of PRs that can land together without conflicting.
@@ -1167,7 +1352,7 @@ type Train struct {
 
 func (x *Train) Reset() {
 	*x = Train{}
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1179,7 +1364,7 @@ func (x *Train) String() string {
 func (*Train) ProtoMessage() {}
 
 func (x *Train) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1192,7 +1377,7 @@ func (x *Train) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Train.ProtoReflect.Descriptor instead.
 func (*Train) Descriptor() ([]byte, []int) {
-	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{19}
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Train) GetPrs() []*PullRequest {
@@ -1224,7 +1409,17 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x15ListWorkspacesRequest\"B\n" +
 	"\x16FinishWorkspaceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\aerrored\x18\x02 \x01(\bR\aerrored\"(\n" +
+	"\aerrored\x18\x02 \x01(\bR\aerrored\"B\n" +
+	"\x16CommitWorkspaceRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\":\n" +
+	"\x17CommitWorkspaceResponse\x12\x1f\n" +
+	"\vcommit_hash\x18\x01 \x01(\tR\n" +
+	"commitHash\">\n" +
+	"\x14PushWorkspaceRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06remote\x18\x02 \x01(\tR\x06remote\"\x17\n" +
+	"\x15PushWorkspaceResponse\"(\n" +
 	"\x16DeleteWorkspaceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x19\n" +
 	"\x17DeleteWorkspaceResponse\"\x19\n" +
@@ -1278,12 +1473,14 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x10PR_STATUS_QUEUED\x10\x01\x12\x17\n" +
 	"\x13PR_STATUS_SUBMITTED\x10\x02\x12\x14\n" +
 	"\x10PR_STATUS_MERGED\x10\x03\x12\x14\n" +
-	"\x10PR_STATUS_FAILED\x10\x042\x95\x06\n" +
+	"\x10PR_STATUS_FAILED\x10\x042\xbb\a\n" +
 	"\vMeshService\x12>\n" +
 	"\rRegisterAgent\x12\x1d.mesh.v1.RegisterAgentRequest\x1a\x0e.mesh.v1.Agent\x12F\n" +
 	"\x0fCreateWorkspace\x12\x1f.mesh.v1.CreateWorkspaceRequest\x1a\x12.mesh.v1.Workspace\x12F\n" +
 	"\x0eListWorkspaces\x12\x1e.mesh.v1.ListWorkspacesRequest\x1a\x12.mesh.v1.Workspace0\x01\x12F\n" +
 	"\x0fFinishWorkspace\x12\x1f.mesh.v1.FinishWorkspaceRequest\x1a\x12.mesh.v1.Workspace\x12T\n" +
+	"\x0fCommitWorkspace\x12\x1f.mesh.v1.CommitWorkspaceRequest\x1a .mesh.v1.CommitWorkspaceResponse\x12N\n" +
+	"\rPushWorkspace\x12\x1d.mesh.v1.PushWorkspaceRequest\x1a\x1e.mesh.v1.PushWorkspaceResponse\x12T\n" +
 	"\x0fDeleteWorkspace\x12\x1f.mesh.v1.DeleteWorkspaceRequest\x1a .mesh.v1.DeleteWorkspaceResponse\x12R\n" +
 	"\x10ReclaimWorktrees\x12 .mesh.v1.ReclaimWorktreesRequest\x1a\x1a.mesh.v1.ReclaimedWorktree0\x01\x12=\n" +
 	"\vCheckIntent\x12\x1b.mesh.v1.CheckIntentRequest\x1a\x11.mesh.v1.Decision\x12Q\n" +
@@ -1306,7 +1503,7 @@ func file_proto_mesh_v1_mesh_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_mesh_v1_mesh_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(WorkspaceStatus)(0),            // 0: mesh.v1.WorkspaceStatus
 	(Verdict)(0),                    // 1: mesh.v1.Verdict
@@ -1317,53 +1514,61 @@ var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(*CreateWorkspaceRequest)(nil),  // 6: mesh.v1.CreateWorkspaceRequest
 	(*ListWorkspacesRequest)(nil),   // 7: mesh.v1.ListWorkspacesRequest
 	(*FinishWorkspaceRequest)(nil),  // 8: mesh.v1.FinishWorkspaceRequest
-	(*DeleteWorkspaceRequest)(nil),  // 9: mesh.v1.DeleteWorkspaceRequest
-	(*DeleteWorkspaceResponse)(nil), // 10: mesh.v1.DeleteWorkspaceResponse
-	(*ReclaimWorktreesRequest)(nil), // 11: mesh.v1.ReclaimWorktreesRequest
-	(*ReclaimedWorktree)(nil),       // 12: mesh.v1.ReclaimedWorktree
-	(*Conflict)(nil),                // 13: mesh.v1.Conflict
-	(*Decision)(nil),                // 14: mesh.v1.Decision
-	(*CheckIntentRequest)(nil),      // 15: mesh.v1.CheckIntentRequest
-	(*RegisterIntentRequest)(nil),   // 16: mesh.v1.RegisterIntentRequest
-	(*RegisterIntentResponse)(nil),  // 17: mesh.v1.RegisterIntentResponse
-	(*PullRequest)(nil),             // 18: mesh.v1.PullRequest
-	(*SubmitPRRequest)(nil),         // 19: mesh.v1.SubmitPRRequest
-	(*ListPRsRequest)(nil),          // 20: mesh.v1.ListPRsRequest
-	(*PlanTrainsRequest)(nil),       // 21: mesh.v1.PlanTrainsRequest
-	(*Train)(nil),                   // 22: mesh.v1.Train
+	(*CommitWorkspaceRequest)(nil),  // 9: mesh.v1.CommitWorkspaceRequest
+	(*CommitWorkspaceResponse)(nil), // 10: mesh.v1.CommitWorkspaceResponse
+	(*PushWorkspaceRequest)(nil),    // 11: mesh.v1.PushWorkspaceRequest
+	(*PushWorkspaceResponse)(nil),   // 12: mesh.v1.PushWorkspaceResponse
+	(*DeleteWorkspaceRequest)(nil),  // 13: mesh.v1.DeleteWorkspaceRequest
+	(*DeleteWorkspaceResponse)(nil), // 14: mesh.v1.DeleteWorkspaceResponse
+	(*ReclaimWorktreesRequest)(nil), // 15: mesh.v1.ReclaimWorktreesRequest
+	(*ReclaimedWorktree)(nil),       // 16: mesh.v1.ReclaimedWorktree
+	(*Conflict)(nil),                // 17: mesh.v1.Conflict
+	(*Decision)(nil),                // 18: mesh.v1.Decision
+	(*CheckIntentRequest)(nil),      // 19: mesh.v1.CheckIntentRequest
+	(*RegisterIntentRequest)(nil),   // 20: mesh.v1.RegisterIntentRequest
+	(*RegisterIntentResponse)(nil),  // 21: mesh.v1.RegisterIntentResponse
+	(*PullRequest)(nil),             // 22: mesh.v1.PullRequest
+	(*SubmitPRRequest)(nil),         // 23: mesh.v1.SubmitPRRequest
+	(*ListPRsRequest)(nil),          // 24: mesh.v1.ListPRsRequest
+	(*PlanTrainsRequest)(nil),       // 25: mesh.v1.PlanTrainsRequest
+	(*Train)(nil),                   // 26: mesh.v1.Train
 }
 var file_proto_mesh_v1_mesh_proto_depIdxs = []int32{
 	0,  // 0: mesh.v1.Workspace.status:type_name -> mesh.v1.WorkspaceStatus
 	1,  // 1: mesh.v1.Decision.verdict:type_name -> mesh.v1.Verdict
-	13, // 2: mesh.v1.Decision.conflicts:type_name -> mesh.v1.Conflict
-	14, // 3: mesh.v1.RegisterIntentResponse.decision:type_name -> mesh.v1.Decision
+	17, // 2: mesh.v1.Decision.conflicts:type_name -> mesh.v1.Conflict
+	18, // 3: mesh.v1.RegisterIntentResponse.decision:type_name -> mesh.v1.Decision
 	2,  // 4: mesh.v1.PullRequest.status:type_name -> mesh.v1.PRStatus
 	2,  // 5: mesh.v1.ListPRsRequest.status:type_name -> mesh.v1.PRStatus
-	18, // 6: mesh.v1.Train.prs:type_name -> mesh.v1.PullRequest
+	22, // 6: mesh.v1.Train.prs:type_name -> mesh.v1.PullRequest
 	4,  // 7: mesh.v1.MeshService.RegisterAgent:input_type -> mesh.v1.RegisterAgentRequest
 	6,  // 8: mesh.v1.MeshService.CreateWorkspace:input_type -> mesh.v1.CreateWorkspaceRequest
 	7,  // 9: mesh.v1.MeshService.ListWorkspaces:input_type -> mesh.v1.ListWorkspacesRequest
 	8,  // 10: mesh.v1.MeshService.FinishWorkspace:input_type -> mesh.v1.FinishWorkspaceRequest
-	9,  // 11: mesh.v1.MeshService.DeleteWorkspace:input_type -> mesh.v1.DeleteWorkspaceRequest
-	11, // 12: mesh.v1.MeshService.ReclaimWorktrees:input_type -> mesh.v1.ReclaimWorktreesRequest
-	15, // 13: mesh.v1.MeshService.CheckIntent:input_type -> mesh.v1.CheckIntentRequest
-	16, // 14: mesh.v1.MeshService.RegisterIntent:input_type -> mesh.v1.RegisterIntentRequest
-	19, // 15: mesh.v1.MeshService.SubmitPR:input_type -> mesh.v1.SubmitPRRequest
-	20, // 16: mesh.v1.MeshService.ListPRs:input_type -> mesh.v1.ListPRsRequest
-	21, // 17: mesh.v1.MeshService.PlanTrains:input_type -> mesh.v1.PlanTrainsRequest
-	3,  // 18: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
-	5,  // 19: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
-	5,  // 20: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
-	5,  // 21: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
-	10, // 22: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
-	12, // 23: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
-	14, // 24: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
-	17, // 25: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
-	18, // 26: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
-	18, // 27: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
-	22, // 28: mesh.v1.MeshService.PlanTrains:output_type -> mesh.v1.Train
-	18, // [18:29] is the sub-list for method output_type
-	7,  // [7:18] is the sub-list for method input_type
+	9,  // 11: mesh.v1.MeshService.CommitWorkspace:input_type -> mesh.v1.CommitWorkspaceRequest
+	11, // 12: mesh.v1.MeshService.PushWorkspace:input_type -> mesh.v1.PushWorkspaceRequest
+	13, // 13: mesh.v1.MeshService.DeleteWorkspace:input_type -> mesh.v1.DeleteWorkspaceRequest
+	15, // 14: mesh.v1.MeshService.ReclaimWorktrees:input_type -> mesh.v1.ReclaimWorktreesRequest
+	19, // 15: mesh.v1.MeshService.CheckIntent:input_type -> mesh.v1.CheckIntentRequest
+	20, // 16: mesh.v1.MeshService.RegisterIntent:input_type -> mesh.v1.RegisterIntentRequest
+	23, // 17: mesh.v1.MeshService.SubmitPR:input_type -> mesh.v1.SubmitPRRequest
+	24, // 18: mesh.v1.MeshService.ListPRs:input_type -> mesh.v1.ListPRsRequest
+	25, // 19: mesh.v1.MeshService.PlanTrains:input_type -> mesh.v1.PlanTrainsRequest
+	3,  // 20: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
+	5,  // 21: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
+	5,  // 22: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
+	5,  // 23: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
+	10, // 24: mesh.v1.MeshService.CommitWorkspace:output_type -> mesh.v1.CommitWorkspaceResponse
+	12, // 25: mesh.v1.MeshService.PushWorkspace:output_type -> mesh.v1.PushWorkspaceResponse
+	14, // 26: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
+	16, // 27: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
+	18, // 28: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
+	21, // 29: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
+	22, // 30: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
+	22, // 31: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
+	26, // 32: mesh.v1.MeshService.PlanTrains:output_type -> mesh.v1.Train
+	20, // [20:33] is the sub-list for method output_type
+	7,  // [7:20] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1380,7 +1585,7 @@ func file_proto_mesh_v1_mesh_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mesh_v1_mesh_proto_rawDesc), len(file_proto_mesh_v1_mesh_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   20,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

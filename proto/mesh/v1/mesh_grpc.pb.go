@@ -26,6 +26,8 @@ const (
 	MeshService_CreateWorkspace_FullMethodName  = "/mesh.v1.MeshService/CreateWorkspace"
 	MeshService_ListWorkspaces_FullMethodName   = "/mesh.v1.MeshService/ListWorkspaces"
 	MeshService_FinishWorkspace_FullMethodName  = "/mesh.v1.MeshService/FinishWorkspace"
+	MeshService_CommitWorkspace_FullMethodName  = "/mesh.v1.MeshService/CommitWorkspace"
+	MeshService_PushWorkspace_FullMethodName    = "/mesh.v1.MeshService/PushWorkspace"
 	MeshService_DeleteWorkspace_FullMethodName  = "/mesh.v1.MeshService/DeleteWorkspace"
 	MeshService_ReclaimWorktrees_FullMethodName = "/mesh.v1.MeshService/ReclaimWorktrees"
 	MeshService_CheckIntent_FullMethodName      = "/mesh.v1.MeshService/CheckIntent"
@@ -50,6 +52,10 @@ type MeshServiceClient interface {
 	ListWorkspaces(ctx context.Context, in *ListWorkspacesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Workspace], error)
 	// FinishWorkspace marks a workspace terminal and reclaims its worktree.
 	FinishWorkspace(ctx context.Context, in *FinishWorkspaceRequest, opts ...grpc.CallOption) (*Workspace, error)
+	// CommitWorkspace stages and commits all changes in a workspace's worktree.
+	CommitWorkspace(ctx context.Context, in *CommitWorkspaceRequest, opts ...grpc.CallOption) (*CommitWorkspaceResponse, error)
+	// PushWorkspace pushes a workspace's branch to its remote.
+	PushWorkspace(ctx context.Context, in *PushWorkspaceRequest, opts ...grpc.CallOption) (*PushWorkspaceResponse, error)
 	// DeleteWorkspace removes a workspace and its worktree entirely.
 	DeleteWorkspace(ctx context.Context, in *DeleteWorkspaceRequest, opts ...grpc.CallOption) (*DeleteWorkspaceResponse, error)
 	// ReclaimWorktrees streams the names of orphan worktrees it reclaimed.
@@ -118,6 +124,26 @@ func (c *meshServiceClient) FinishWorkspace(ctx context.Context, in *FinishWorks
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Workspace)
 	err := c.cc.Invoke(ctx, MeshService_FinishWorkspace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *meshServiceClient) CommitWorkspace(ctx context.Context, in *CommitWorkspaceRequest, opts ...grpc.CallOption) (*CommitWorkspaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommitWorkspaceResponse)
+	err := c.cc.Invoke(ctx, MeshService_CommitWorkspace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *meshServiceClient) PushWorkspace(ctx context.Context, in *PushWorkspaceRequest, opts ...grpc.CallOption) (*PushWorkspaceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PushWorkspaceResponse)
+	err := c.cc.Invoke(ctx, MeshService_PushWorkspace_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -236,6 +262,10 @@ type MeshServiceServer interface {
 	ListWorkspaces(*ListWorkspacesRequest, grpc.ServerStreamingServer[Workspace]) error
 	// FinishWorkspace marks a workspace terminal and reclaims its worktree.
 	FinishWorkspace(context.Context, *FinishWorkspaceRequest) (*Workspace, error)
+	// CommitWorkspace stages and commits all changes in a workspace's worktree.
+	CommitWorkspace(context.Context, *CommitWorkspaceRequest) (*CommitWorkspaceResponse, error)
+	// PushWorkspace pushes a workspace's branch to its remote.
+	PushWorkspace(context.Context, *PushWorkspaceRequest) (*PushWorkspaceResponse, error)
 	// DeleteWorkspace removes a workspace and its worktree entirely.
 	DeleteWorkspace(context.Context, *DeleteWorkspaceRequest) (*DeleteWorkspaceResponse, error)
 	// ReclaimWorktrees streams the names of orphan worktrees it reclaimed.
@@ -272,6 +302,12 @@ func (UnimplementedMeshServiceServer) ListWorkspaces(*ListWorkspacesRequest, grp
 }
 func (UnimplementedMeshServiceServer) FinishWorkspace(context.Context, *FinishWorkspaceRequest) (*Workspace, error) {
 	return nil, status.Error(codes.Unimplemented, "method FinishWorkspace not implemented")
+}
+func (UnimplementedMeshServiceServer) CommitWorkspace(context.Context, *CommitWorkspaceRequest) (*CommitWorkspaceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CommitWorkspace not implemented")
+}
+func (UnimplementedMeshServiceServer) PushWorkspace(context.Context, *PushWorkspaceRequest) (*PushWorkspaceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PushWorkspace not implemented")
 }
 func (UnimplementedMeshServiceServer) DeleteWorkspace(context.Context, *DeleteWorkspaceRequest) (*DeleteWorkspaceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteWorkspace not implemented")
@@ -376,6 +412,42 @@ func _MeshService_FinishWorkspace_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MeshServiceServer).FinishWorkspace(ctx, req.(*FinishWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MeshService_CommitWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MeshServiceServer).CommitWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MeshService_CommitWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MeshServiceServer).CommitWorkspace(ctx, req.(*CommitWorkspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MeshService_PushWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PushWorkspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MeshServiceServer).PushWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MeshService_PushWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MeshServiceServer).PushWorkspace(ctx, req.(*PushWorkspaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -503,6 +575,14 @@ var MeshService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishWorkspace",
 			Handler:    _MeshService_FinishWorkspace_Handler,
+		},
+		{
+			MethodName: "CommitWorkspace",
+			Handler:    _MeshService_CommitWorkspace_Handler,
+		},
+		{
+			MethodName: "PushWorkspace",
+			Handler:    _MeshService_PushWorkspace_Handler,
 		},
 		{
 			MethodName: "DeleteWorkspace",

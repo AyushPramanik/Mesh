@@ -71,6 +71,21 @@ func (s *server) FinishWorkspace(ctx context.Context, req *meshv1.FinishWorkspac
 	return workspaceProto(ws), nil
 }
 
+func (s *server) CommitWorkspace(ctx context.Context, req *meshv1.CommitWorkspaceRequest) (*meshv1.CommitWorkspaceResponse, error) {
+	hash, err := s.d.Workspaces.Commit(ctx, req.GetId(), req.GetMessage())
+	if err != nil {
+		return nil, grpcErr(err)
+	}
+	return &meshv1.CommitWorkspaceResponse{CommitHash: hash}, nil
+}
+
+func (s *server) PushWorkspace(ctx context.Context, req *meshv1.PushWorkspaceRequest) (*meshv1.PushWorkspaceResponse, error) {
+	if err := s.d.Workspaces.Push(ctx, req.GetId(), req.GetRemote()); err != nil {
+		return nil, grpcErr(err)
+	}
+	return &meshv1.PushWorkspaceResponse{}, nil
+}
+
 func (s *server) DeleteWorkspace(ctx context.Context, req *meshv1.DeleteWorkspaceRequest) (*meshv1.DeleteWorkspaceResponse, error) {
 	if err := s.d.Workspaces.Delete(ctx, req.GetId()); err != nil {
 		return nil, grpcErr(err)

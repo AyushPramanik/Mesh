@@ -21,6 +21,12 @@ service MeshService {
   // FinishWorkspace marks a workspace terminal and reclaims its worktree.
   rpc FinishWorkspace(FinishWorkspaceRequest) returns (Workspace);
 
+  // CommitWorkspace stages and commits all changes in a workspace's worktree.
+  rpc CommitWorkspace(CommitWorkspaceRequest) returns (CommitWorkspaceResponse);
+
+  // PushWorkspace pushes a workspace's branch to its remote.
+  rpc PushWorkspace(PushWorkspaceRequest) returns (PushWorkspaceResponse);
+
   // DeleteWorkspace removes a workspace and its worktree entirely.
   rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
 
@@ -81,6 +87,23 @@ message FinishWorkspaceRequest {
   // When true the workspace is finished as errored rather than done.
   bool errored = 2;
 }
+
+message CommitWorkspaceRequest {
+  string id = 1;
+  string message = 2;
+}
+
+message CommitWorkspaceResponse {
+  string commit_hash = 1;
+}
+
+message PushWorkspaceRequest {
+  string id = 1;
+  // Remote to push to; defaults to "origin" when empty.
+  string remote = 2;
+}
+
+message PushWorkspaceResponse {}
 
 message DeleteWorkspaceRequest {
   string id = 1;
