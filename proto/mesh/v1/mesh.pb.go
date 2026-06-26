@@ -1387,6 +1387,113 @@ func (x *Train) GetPrs() []*PullRequest {
 	return nil
 }
 
+type AnalyzeConflictsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BranchA       string                 `protobuf:"bytes,1,opt,name=branch_a,json=branchA,proto3" json:"branch_a,omitempty"`
+	BranchB       string                 `protobuf:"bytes,2,opt,name=branch_b,json=branchB,proto3" json:"branch_b,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeConflictsRequest) Reset() {
+	*x = AnalyzeConflictsRequest{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeConflictsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeConflictsRequest) ProtoMessage() {}
+
+func (x *AnalyzeConflictsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeConflictsRequest.ProtoReflect.Descriptor instead.
+func (*AnalyzeConflictsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *AnalyzeConflictsRequest) GetBranchA() string {
+	if x != nil {
+		return x.BranchA
+	}
+	return ""
+}
+
+func (x *AnalyzeConflictsRequest) GetBranchB() string {
+	if x != nil {
+		return x.BranchB
+	}
+	return ""
+}
+
+// SemanticConflict is one symbol-level collision between two branches.
+type SemanticConflict struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// "direct" (both change the symbol) or "dependency" (one changes a symbol the
+	// other references).
+	Kind          string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Symbol        string `protobuf:"bytes,2,opt,name=symbol,proto3" json:"symbol,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SemanticConflict) Reset() {
+	*x = SemanticConflict{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SemanticConflict) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SemanticConflict) ProtoMessage() {}
+
+func (x *SemanticConflict) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SemanticConflict.ProtoReflect.Descriptor instead.
+func (*SemanticConflict) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SemanticConflict) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *SemanticConflict) GetSymbol() string {
+	if x != nil {
+		return x.Symbol
+	}
+	return ""
+}
+
 var File_proto_mesh_v1_mesh_proto protoreflect.FileDescriptor
 
 const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
@@ -1458,7 +1565,13 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\x0e2\x11.mesh.v1.PRStatusR\x06status\"\x13\n" +
 	"\x11PlanTrainsRequest\"/\n" +
 	"\x05Train\x12&\n" +
-	"\x03prs\x18\x01 \x03(\v2\x14.mesh.v1.PullRequestR\x03prs*\x87\x01\n" +
+	"\x03prs\x18\x01 \x03(\v2\x14.mesh.v1.PullRequestR\x03prs\"O\n" +
+	"\x17AnalyzeConflictsRequest\x12\x19\n" +
+	"\bbranch_a\x18\x01 \x01(\tR\abranchA\x12\x19\n" +
+	"\bbranch_b\x18\x02 \x01(\tR\abranchB\">\n" +
+	"\x10SemanticConflict\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x16\n" +
+	"\x06symbol\x18\x02 \x01(\tR\x06symbol*\x87\x01\n" +
 	"\x0fWorkspaceStatus\x12 \n" +
 	"\x1cWORKSPACE_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17WORKSPACE_STATUS_ACTIVE\x10\x01\x12\x19\n" +
@@ -1473,7 +1586,7 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x10PR_STATUS_QUEUED\x10\x01\x12\x17\n" +
 	"\x13PR_STATUS_SUBMITTED\x10\x02\x12\x14\n" +
 	"\x10PR_STATUS_MERGED\x10\x03\x12\x14\n" +
-	"\x10PR_STATUS_FAILED\x10\x042\xbb\a\n" +
+	"\x10PR_STATUS_FAILED\x10\x042\x8e\b\n" +
 	"\vMeshService\x12>\n" +
 	"\rRegisterAgent\x12\x1d.mesh.v1.RegisterAgentRequest\x1a\x0e.mesh.v1.Agent\x12F\n" +
 	"\x0fCreateWorkspace\x12\x1f.mesh.v1.CreateWorkspaceRequest\x1a\x12.mesh.v1.Workspace\x12F\n" +
@@ -1488,7 +1601,8 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\bSubmitPR\x12\x18.mesh.v1.SubmitPRRequest\x1a\x14.mesh.v1.PullRequest\x12:\n" +
 	"\aListPRs\x12\x17.mesh.v1.ListPRsRequest\x1a\x14.mesh.v1.PullRequest0\x01\x12:\n" +
 	"\n" +
-	"PlanTrains\x12\x1a.mesh.v1.PlanTrainsRequest\x1a\x0e.mesh.v1.Train0\x01B4Z2github.com/AyushPramanik/mesh/proto/mesh/v1;meshv1b\x06proto3"
+	"PlanTrains\x12\x1a.mesh.v1.PlanTrainsRequest\x1a\x0e.mesh.v1.Train0\x01\x12Q\n" +
+	"\x10AnalyzeConflicts\x12 .mesh.v1.AnalyzeConflictsRequest\x1a\x19.mesh.v1.SemanticConflict0\x01B4Z2github.com/AyushPramanik/mesh/proto/mesh/v1;meshv1b\x06proto3"
 
 var (
 	file_proto_mesh_v1_mesh_proto_rawDescOnce sync.Once
@@ -1503,7 +1617,7 @@ func file_proto_mesh_v1_mesh_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_mesh_v1_mesh_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(WorkspaceStatus)(0),            // 0: mesh.v1.WorkspaceStatus
 	(Verdict)(0),                    // 1: mesh.v1.Verdict
@@ -1532,6 +1646,8 @@ var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(*ListPRsRequest)(nil),          // 24: mesh.v1.ListPRsRequest
 	(*PlanTrainsRequest)(nil),       // 25: mesh.v1.PlanTrainsRequest
 	(*Train)(nil),                   // 26: mesh.v1.Train
+	(*AnalyzeConflictsRequest)(nil), // 27: mesh.v1.AnalyzeConflictsRequest
+	(*SemanticConflict)(nil),        // 28: mesh.v1.SemanticConflict
 }
 var file_proto_mesh_v1_mesh_proto_depIdxs = []int32{
 	0,  // 0: mesh.v1.Workspace.status:type_name -> mesh.v1.WorkspaceStatus
@@ -1554,21 +1670,23 @@ var file_proto_mesh_v1_mesh_proto_depIdxs = []int32{
 	23, // 17: mesh.v1.MeshService.SubmitPR:input_type -> mesh.v1.SubmitPRRequest
 	24, // 18: mesh.v1.MeshService.ListPRs:input_type -> mesh.v1.ListPRsRequest
 	25, // 19: mesh.v1.MeshService.PlanTrains:input_type -> mesh.v1.PlanTrainsRequest
-	3,  // 20: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
-	5,  // 21: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
-	5,  // 22: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
-	5,  // 23: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
-	10, // 24: mesh.v1.MeshService.CommitWorkspace:output_type -> mesh.v1.CommitWorkspaceResponse
-	12, // 25: mesh.v1.MeshService.PushWorkspace:output_type -> mesh.v1.PushWorkspaceResponse
-	14, // 26: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
-	16, // 27: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
-	18, // 28: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
-	21, // 29: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
-	22, // 30: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
-	22, // 31: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
-	26, // 32: mesh.v1.MeshService.PlanTrains:output_type -> mesh.v1.Train
-	20, // [20:33] is the sub-list for method output_type
-	7,  // [7:20] is the sub-list for method input_type
+	27, // 20: mesh.v1.MeshService.AnalyzeConflicts:input_type -> mesh.v1.AnalyzeConflictsRequest
+	3,  // 21: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
+	5,  // 22: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
+	5,  // 23: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
+	5,  // 24: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
+	10, // 25: mesh.v1.MeshService.CommitWorkspace:output_type -> mesh.v1.CommitWorkspaceResponse
+	12, // 26: mesh.v1.MeshService.PushWorkspace:output_type -> mesh.v1.PushWorkspaceResponse
+	14, // 27: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
+	16, // 28: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
+	18, // 29: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
+	21, // 30: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
+	22, // 31: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
+	22, // 32: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
+	26, // 33: mesh.v1.MeshService.PlanTrains:output_type -> mesh.v1.Train
+	28, // 34: mesh.v1.MeshService.AnalyzeConflicts:output_type -> mesh.v1.SemanticConflict
+	21, // [21:35] is the sub-list for method output_type
+	7,  // [7:21] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1585,7 +1703,7 @@ func file_proto_mesh_v1_mesh_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mesh_v1_mesh_proto_rawDesc), len(file_proto_mesh_v1_mesh_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

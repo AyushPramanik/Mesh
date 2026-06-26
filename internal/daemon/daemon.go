@@ -39,6 +39,7 @@ type Daemon struct {
 	Conflicts  *conflict.Predictor
 	Queue      *queue.Queue
 	Scheduler  *queue.Scheduler
+	Analyzer   *conflict.Analyzer
 
 	// processQueue is true when a PR submitter is configured; only then does
 	// Run drain the queue (otherwise PRs enqueue and wait).
@@ -88,6 +89,7 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		base = "main"
 	}
 	q := queue.New(st, submitter)
+	files := gitFileSource{repo: repo, base: base}
 
 	d := &Daemon{
 		cfg:          cfg,
@@ -97,14 +99,16 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		Workspaces:   workspace.NewManager(repo, st),
 		Conflicts:    conflict.New(st),
 		Queue:        q,
-		Scheduler:    queue.NewScheduler(q, gitFileSource{repo: repo, base: base}),
+		Scheduler:    queue.NewScheduler(q, files),
+		Analyzer:     conflict.NewAnalyzer(files),
 		processQueue: processQueue,
 	}
 	return d, nil
 }
 
-// gitFileSource adapts the git repo to queue.FileSource, reporting a branch's
-// footprint as its diff against the configured base branch.
+// gitFileSource adapts the git repo to both queue.FileSource and
+// conflict.BranchSource: a branch's footprint is its diff against the configured
+// base branch, and file contents are read at the branch tip.
 type gitFileSource struct {
 	repo *git.Repo
 	base string
@@ -112,6 +116,10 @@ type gitFileSource struct {
 
 func (g gitFileSource) ChangedFiles(ctx context.Context, branch string) ([]string, error) {
 	return g.repo.ChangedFiles(ctx, g.base, branch)
+}
+
+func (g gitFileSource) ReadFile(ctx context.Context, branch, path string) ([]byte, error) {
+	return g.repo.ReadFileAtBranch(ctx, branch, path)
 }
 
 // disabledSubmitter is used when no GitHub credentials are configured. It is

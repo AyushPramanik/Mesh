@@ -48,6 +48,10 @@ service MeshService {
   // PlanTrains streams the merge trains planned from the queued PRs, highest
   // priority first.
   rpc PlanTrains(PlanTrainsRequest) returns (stream Train);
+
+  // AnalyzeConflicts streams the symbol-level (AST) conflicts between two
+  // branches' changes — including dependency conflicts that share no files.
+  rpc AnalyzeConflicts(AnalyzeConflictsRequest) returns (stream SemanticConflict);
 }
 
 message Agent {
@@ -185,4 +189,17 @@ message PlanTrainsRequest {}
 // A Train is a batch of PRs that can land together without conflicting.
 message Train {
   repeated PullRequest prs = 1;
+}
+
+message AnalyzeConflictsRequest {
+  string branch_a = 1;
+  string branch_b = 2;
+}
+
+// SemanticConflict is one symbol-level collision between two branches.
+message SemanticConflict {
+  // "direct" (both change the symbol) or "dependency" (one changes a symbol the
+  // other references).
+  string kind = 1;
+  string symbol = 2;
 }

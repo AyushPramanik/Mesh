@@ -168,6 +168,19 @@ func (s *server) PlanTrains(_ *meshv1.PlanTrainsRequest, stream grpc.ServerStrea
 	return nil
 }
 
+func (s *server) AnalyzeConflicts(req *meshv1.AnalyzeConflictsRequest, stream grpc.ServerStreamingServer[meshv1.SemanticConflict]) error {
+	conflicts, err := s.d.Analyzer.Conflicts(stream.Context(), req.GetBranchA(), req.GetBranchB())
+	if err != nil {
+		return grpcErr(err)
+	}
+	for _, c := range conflicts {
+		if err := stream.Send(&meshv1.SemanticConflict{Kind: c.Kind, Symbol: c.Symbol}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // grpcErr maps a domain error to a gRPC status. The mapping is coarse for now;
 // typed sentinel errors can refine the codes as the domain grows.
 func grpcErr(err error) error {

@@ -35,6 +35,7 @@ const (
 	MeshService_SubmitPR_FullMethodName         = "/mesh.v1.MeshService/SubmitPR"
 	MeshService_ListPRs_FullMethodName          = "/mesh.v1.MeshService/ListPRs"
 	MeshService_PlanTrains_FullMethodName       = "/mesh.v1.MeshService/PlanTrains"
+	MeshService_AnalyzeConflicts_FullMethodName = "/mesh.v1.MeshService/AnalyzeConflicts"
 )
 
 // MeshServiceClient is the client API for MeshService service.
@@ -71,6 +72,9 @@ type MeshServiceClient interface {
 	// PlanTrains streams the merge trains planned from the queued PRs, highest
 	// priority first.
 	PlanTrains(ctx context.Context, in *PlanTrainsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Train], error)
+	// AnalyzeConflicts streams the symbol-level (AST) conflicts between two
+	// branches' changes — including dependency conflicts that share no files.
+	AnalyzeConflicts(ctx context.Context, in *AnalyzeConflictsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SemanticConflict], error)
 }
 
 type meshServiceClient struct {
@@ -247,6 +251,25 @@ func (c *meshServiceClient) PlanTrains(ctx context.Context, in *PlanTrainsReques
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_PlanTrainsClient = grpc.ServerStreamingClient[Train]
 
+func (c *meshServiceClient) AnalyzeConflicts(ctx context.Context, in *AnalyzeConflictsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SemanticConflict], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MeshService_ServiceDesc.Streams[4], MeshService_AnalyzeConflicts_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[AnalyzeConflictsRequest, SemanticConflict]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_AnalyzeConflictsClient = grpc.ServerStreamingClient[SemanticConflict]
+
 // MeshServiceServer is the server API for MeshService service.
 // All implementations must embed UnimplementedMeshServiceServer
 // for forward compatibility.
@@ -281,6 +304,9 @@ type MeshServiceServer interface {
 	// PlanTrains streams the merge trains planned from the queued PRs, highest
 	// priority first.
 	PlanTrains(*PlanTrainsRequest, grpc.ServerStreamingServer[Train]) error
+	// AnalyzeConflicts streams the symbol-level (AST) conflicts between two
+	// branches' changes — including dependency conflicts that share no files.
+	AnalyzeConflicts(*AnalyzeConflictsRequest, grpc.ServerStreamingServer[SemanticConflict]) error
 	mustEmbedUnimplementedMeshServiceServer()
 }
 
@@ -329,6 +355,9 @@ func (UnimplementedMeshServiceServer) ListPRs(*ListPRsRequest, grpc.ServerStream
 }
 func (UnimplementedMeshServiceServer) PlanTrains(*PlanTrainsRequest, grpc.ServerStreamingServer[Train]) error {
 	return status.Error(codes.Unimplemented, "method PlanTrains not implemented")
+}
+func (UnimplementedMeshServiceServer) AnalyzeConflicts(*AnalyzeConflictsRequest, grpc.ServerStreamingServer[SemanticConflict]) error {
+	return status.Error(codes.Unimplemented, "method AnalyzeConflicts not implemented")
 }
 func (UnimplementedMeshServiceServer) mustEmbedUnimplementedMeshServiceServer() {}
 func (UnimplementedMeshServiceServer) testEmbeddedByValue()                     {}
@@ -557,6 +586,17 @@ func _MeshService_PlanTrains_Handler(srv interface{}, stream grpc.ServerStream) 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_PlanTrainsServer = grpc.ServerStreamingServer[Train]
 
+func _MeshService_AnalyzeConflicts_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(AnalyzeConflictsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MeshServiceServer).AnalyzeConflicts(m, &grpc.GenericServerStream[AnalyzeConflictsRequest, SemanticConflict]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_AnalyzeConflictsServer = grpc.ServerStreamingServer[SemanticConflict]
+
 // MeshService_ServiceDesc is the grpc.ServiceDesc for MeshService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -620,6 +660,11 @@ var MeshService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "PlanTrains",
 			Handler:       _MeshService_PlanTrains_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "AnalyzeConflicts",
+			Handler:       _MeshService_AnalyzeConflicts_Handler,
 			ServerStreams: true,
 		},
 	},

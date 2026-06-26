@@ -179,6 +179,16 @@ func (r *Repo) PushWorktree(ctx context.Context, worktreePath, branch, remote st
 	return nil
 }
 
+// ReadFileAtBranch returns the contents of a repository-relative path as it
+// exists at the tip of branch. A path absent on that branch yields an error.
+func (r *Repo) ReadFileAtBranch(ctx context.Context, branch, path string) ([]byte, error) {
+	out, err := r.runGit(ctx, "show", branch+":"+path)
+	if err != nil {
+		return nil, fmt.Errorf("git.ReadFileAtBranch: %w", err)
+	}
+	return out, nil
+}
+
 // runGit runs a git subcommand in the repository's main working tree.
 func (r *Repo) runGit(ctx context.Context, args ...string) ([]byte, error) {
 	return r.runGitIn(ctx, r.dir, args...)

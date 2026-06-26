@@ -213,6 +213,34 @@ func registerTools(s *mcp.Server, c meshv1.MeshServiceClient) {
 	})
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "mesh_analyze_conflicts",
+		Description: "Detect symbol-level (AST) conflicts between two branches' changes, including dependency conflicts where the branches share no files but one defines a Go symbol the other references. Use before parallelizing work to avoid silent semantic clashes.",
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {
+		BranchA string `json:"branch_a"`
+		BranchB string `json:"branch_b"`
+	}) (*mcp.CallToolResult, any, error) {
+		stream, err := c.AnalyzeConflicts(ctx, &meshv1.AnalyzeConflictsRequest{BranchA: in.BranchA, BranchB: in.BranchB})
+		if err != nil {
+			return nil, nil, err
+		}
+		var b strings.Builder
+		for {
+			cf, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			fmt.Fprintf(&b, "%s: %s\n", cf.GetKind(), cf.GetSymbol())
+		}
+		if b.Len() == 0 {
+			return text("no semantic conflicts"), nil, nil
+		}
+		return text(b.String()), nil, nil
+	})
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "mesh_finish_workspace",
 		Description: "Mark a workspace done (or errored) and reclaim its worktree.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {

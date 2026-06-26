@@ -39,8 +39,47 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "repository whose daemon to talk to (default: cwd)")
 	root.PersistentFlags().BoolVar(&flagDev, "dev", false, "verbose logging")
 
-	root.AddCommand(workspaceCmd(), prCmd(), gcCmd())
+	root.AddCommand(workspaceCmd(), prCmd(), conflictCmd(), gcCmd())
 	return root
+}
+
+func conflictCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "conflict <branch-a> <branch-b>",
+		Short: "Show symbol-level (AST) conflicts between two branches",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			stream, err := client.AnalyzeConflicts(cmd.Context(), &meshv1.AnalyzeConflictsRequest{
+				BranchA: args[0],
+				BranchB: args[1],
+			})
+			if err != nil {
+				return err
+			}
+			n := 0
+			for {
+				c, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				n++
+				fmt.Fprintf(cmd.OutOrStdout(), "%-11s %s\n", c.GetKind(), c.GetSymbol())
+			}
+			if n == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "no semantic conflicts")
+			}
+			return nil
+		},
+	}
 }
 
 // dial connects to the daemon's Unix socket for the repository. The daemon
