@@ -16,6 +16,8 @@ import (
 	"net"
 	"os"
 
+	"google.golang.org/grpc"
+
 	"github.com/AyushPramanik/mesh/internal/conflict"
 	"github.com/AyushPramanik/mesh/internal/git"
 	"github.com/AyushPramanik/mesh/internal/github"
@@ -123,6 +125,12 @@ func (d *Daemon) Run(ctx context.Context) error {
 	defer lis.Close()
 	defer os.Remove(d.cfg.SocketPath)
 
+	// Serve the typed agent protocol over the socket.
+	gs := grpc.NewServer()
+	d.Register(gs)
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- gs.Serve(lis) }()
+
 	// Drain the PR queue in the background when a submitter is configured.
 	if d.processQueue {
 		go func() {
@@ -141,9 +149,17 @@ func (d *Daemon) Run(ctx context.Context) error {
 		"db", d.cfg.DBPath(),
 	)
 
-	<-ctx.Done()
-	d.log.Info("mesh daemon shutting down")
-	return nil
+	select {
+	case <-ctx.Done():
+		d.log.Info("mesh daemon shutting down")
+		gs.GracefulStop()
+		return nil
+	case err := <-serveErr:
+		if err != nil {
+			return fmt.Errorf("daemon.Run: serve: %w", err)
+		}
+		return nil
+	}
 }
 
 // Close releases the daemon's resources.

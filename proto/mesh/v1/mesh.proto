@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+// Package mesh.v1 is the typed, versioned agent protocol. Breaking changes get
+// a new major version (mesh/v2); v1 is never broken in place (CLAUDE.md).
+package mesh.v1;
+
+option go_package = "github.com/AyushPramanik/mesh/proto/mesh/v1;meshv1";
+
+// MeshService is the surface agents and the CLI use to drive the daemon. RPCs
+// that can yield more than one result stream, so clients render progressively.
+service MeshService {
+  // RegisterAgent registers (or re-registers) an agent. Idempotent.
+  rpc RegisterAgent(RegisterAgentRequest) returns (Agent);
+
+  // CreateWorkspace provisions an isolated worktree-backed workspace.
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace);
+
+  // ListWorkspaces streams every workspace in creation order.
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (stream Workspace);
+
+  // FinishWorkspace marks a workspace terminal and reclaims its worktree.
+  rpc FinishWorkspace(FinishWorkspaceRequest) returns (Workspace);
+
+  // DeleteWorkspace removes a workspace and its worktree entirely.
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
+
+  // ReclaimWorktrees streams the names of orphan worktrees it reclaimed.
+  rpc ReclaimWorktrees(ReclaimWorktreesRequest) returns (stream ReclaimedWorktree);
+
+  // CheckIntent reports overlap against active intents without recording one.
+  rpc CheckIntent(CheckIntentRequest) returns (Decision);
+
+  // RegisterIntent records an intent and returns the overlap decision.
+  rpc RegisterIntent(RegisterIntentRequest) returns (RegisterIntentResponse);
+
+  // SubmitPR enqueues a pull request for a workspace branch.
+  rpc SubmitPR(SubmitPRRequest) returns (PullRequest);
+
+  // ListPRs streams queued PRs filtered by status.
+  rpc ListPRs(ListPRsRequest) returns (stream PullRequest);
+}
+
+message Agent {
+  string id = 1;
+  string name = 2;
+}
+
+message RegisterAgentRequest {
+  string id = 1;
+  string name = 2;
+}
+
+// WorkspaceStatus mirrors the workspace lifecycle.
+enum WorkspaceStatus {
+  WORKSPACE_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_STATUS_ACTIVE = 1;
+  WORKSPACE_STATUS_DONE = 2;
+  WORKSPACE_STATUS_ERROR = 3;
+}
+
+message Workspace {
+  string id = 1;
+  string agent_id = 2;
+  string branch = 3;
+  string path = 4;
+  WorkspaceStatus status = 5;
+}
+
+message CreateWorkspaceRequest {
+  string agent_id = 1;
+}
+
+message ListWorkspacesRequest {}
+
+message FinishWorkspaceRequest {
+  string id = 1;
+  // When true the workspace is finished as errored rather than done.
+  bool errored = 2;
+}
+
+message DeleteWorkspaceRequest {
+  string id = 1;
+}
+
+message DeleteWorkspaceResponse {}
+
+message ReclaimWorktreesRequest {}
+
+message ReclaimedWorktree {
+  string name = 1;
+}
+
+// Conflict is an overlap with one other workspace's active intent.
+message Conflict {
+  string workspace_id = 1;
+  repeated string paths = 2;
+}
+
+// Verdict is the outcome of an intent check.
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_CLEAR = 1;
+  VERDICT_WARN = 2;
+}
+
+message Decision {
+  Verdict verdict = 1;
+  repeated Conflict conflicts = 2;
+}
+
+message CheckIntentRequest {
+  string workspace_id = 1;
+  repeated string files = 2;
+}
+
+message RegisterIntentRequest {
+  string workspace_id = 1;
+  repeated string files = 2;
+}
+
+message RegisterIntentResponse {
+  string intent_id = 1;
+  Decision decision = 2;
+}
+
+// PRStatus mirrors the PR queue lifecycle.
+enum PRStatus {
+  PR_STATUS_UNSPECIFIED = 0;
+  PR_STATUS_QUEUED = 1;
+  PR_STATUS_SUBMITTED = 2;
+  PR_STATUS_MERGED = 3;
+  PR_STATUS_FAILED = 4;
+}
+
+message PullRequest {
+  string id = 1;
+  string workspace_id = 2;
+  string branch = 3;
+  string title = 4;
+  int32 priority = 5;
+  PRStatus status = 6;
+  int32 attempts = 7;
+}
+
+message SubmitPRRequest {
+  string workspace_id = 1;
+  string branch = 2;
+  string title = 3;
+  int32 priority = 4;
+}
+
+message ListPRsRequest {
+  PRStatus status = 1;
+}

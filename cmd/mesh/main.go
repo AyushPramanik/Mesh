@@ -1,20 +1,21 @@
-// Command mesh is the Mesh CLI. At this stage (build-order step 4) it drives
-// the daemon's core in-process; step 7 turns it into a thin gRPC client of a
-// running meshd. The command surface is intended to stay stable across that
-// switch.
+// Command mesh is the Mesh CLI. As of build-order step 7 it is a thin client of
+// a running meshd, talking the typed gRPC protocol over the daemon's Unix
+// socket. The command surface is unchanged from the earlier in-process version.
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/AyushPramanik/mesh/internal/daemon"
-	"github.com/AyushPramanik/mesh/internal/queue"
-	"github.com/AyushPramanik/mesh/internal/store"
-	"github.com/AyushPramanik/mesh/internal/workspace"
+	meshv1 "github.com/AyushPramanik/mesh/proto/mesh/v1"
 )
 
 func main() {
@@ -31,26 +32,29 @@ var (
 
 func rootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "mesh",
-		Short:         "Agent-native version control",
-		SilenceUsage:  true,
-		SilenceErrors: false,
+		Use:          "mesh",
+		Short:        "Agent-native version control",
+		SilenceUsage: true,
 	}
-	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "git repository to operate on (default: cwd)")
+	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "repository whose daemon to talk to (default: cwd)")
 	root.PersistentFlags().BoolVar(&flagDev, "dev", false, "verbose logging")
 
 	root.AddCommand(workspaceCmd(), prCmd(), gcCmd())
 	return root
 }
 
-// openCore builds the daemon's in-process core for a single CLI invocation.
-func openCore(cmd *cobra.Command) (*daemon.Daemon, error) {
+// dial connects to the daemon's Unix socket for the repository. The daemon
+// (meshd) must be running.
+func dial(cmd *cobra.Command) (meshv1.MeshServiceClient, func(), error) {
 	cfg, err := daemon.DefaultConfig(flagRepo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	cfg.Dev = flagDev
-	return daemon.New(cmd.Context(), cfg)
+	conn, err := grpc.NewClient("unix://"+cfg.SocketPath, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, nil, fmt.Errorf("connecting to meshd: %w (is the daemon running?)", err)
+	}
+	return meshv1.NewMeshServiceClient(conn), func() { conn.Close() }, nil
 }
 
 func workspaceCmd() *cobra.Command {
@@ -68,24 +72,33 @@ func workspaceListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List workspaces",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
+			defer closeConn()
 
-			workspaces, err := d.Workspaces.List(cmd.Context())
+			stream, err := client.ListWorkspaces(cmd.Context(), &meshv1.ListWorkspacesRequest{})
 			if err != nil {
 				return err
-			}
-			if len(workspaces) == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "no workspaces")
-				return nil
 			}
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "ID\tAGENT\tBRANCH\tSTATUS")
-			for _, ws := range workspaces {
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.ID, ws.AgentID, ws.Branch, ws.Status)
+			n := 0
+			for {
+				ws, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				n++
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ws.GetId(), ws.GetAgentId(), ws.GetBranch(), workspaceStatusName(ws.GetStatus()))
+			}
+			if n == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "no workspaces")
+				return nil
 			}
 			return w.Flush()
 		},
@@ -98,26 +111,25 @@ func workspaceCreateCmd() *cobra.Command {
 		Use:   "create",
 		Short: "Create a workspace for an agent",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
+			defer closeConn()
 
-			// Register the agent up front so a first-time agent can create a
-			// workspace without a separate step (the store FK requires it).
-			if _, err := d.Store.RegisterAgent(cmd.Context(), store.RegisterAgentParams{
-				ID:   agentID,
-				Name: cmp(agentName, agentID),
+			// Register the agent first so a first-time agent can create a
+			// workspace in one step (registration is idempotent).
+			if _, err := client.RegisterAgent(cmd.Context(), &meshv1.RegisterAgentRequest{
+				Id:   agentID,
+				Name: orDefault(agentName, agentID),
 			}); err != nil {
 				return err
 			}
-
-			ws, err := d.Workspaces.Create(cmd.Context(), agentID)
+			ws, err := client.CreateWorkspace(cmd.Context(), &meshv1.CreateWorkspaceRequest{AgentId: agentID})
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "created workspace %s on branch %s\n%s\n", ws.ID, ws.Branch, ws.Path)
+			fmt.Fprintf(cmd.OutOrStdout(), "created workspace %s on branch %s\n%s\n", ws.GetId(), ws.GetBranch(), ws.GetPath())
 			return nil
 		},
 	}
@@ -134,20 +146,20 @@ func workspaceFinishCmd() *cobra.Command {
 		Short: "Finish a workspace and reclaim its worktree",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
+			defer closeConn()
 
-			status := workspace.StatusDone
-			if asError {
-				status = workspace.StatusError
-			}
-			if err := d.Workspaces.Finish(cmd.Context(), args[0], status); err != nil {
+			ws, err := client.FinishWorkspace(cmd.Context(), &meshv1.FinishWorkspaceRequest{
+				Id:      args[0],
+				Errored: asError,
+			})
+			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "finished %s (%s)\n", args[0], status)
+			fmt.Fprintf(cmd.OutOrStdout(), "finished %s (%s)\n", ws.GetId(), workspaceStatusName(ws.GetStatus()))
 			return nil
 		},
 	}
@@ -161,12 +173,12 @@ func workspaceRmCmd() *cobra.Command {
 		Short: "Delete a workspace and its worktree",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
-			if err := d.Workspaces.Delete(cmd.Context(), args[0]); err != nil {
+			defer closeConn()
+			if _, err := client.DeleteWorkspace(cmd.Context(), &meshv1.DeleteWorkspaceRequest{Id: args[0]}); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "deleted %s\n", args[0])
@@ -186,19 +198,19 @@ func prCmd() *cobra.Command {
 
 func prSubmitCmd() *cobra.Command {
 	var workspaceID, branch, title string
-	var priority int
+	var priority int32
 	cmd := &cobra.Command{
 		Use:   "submit",
 		Short: "Queue a pull request for a workspace branch",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
+			defer closeConn()
 
-			pr, err := d.Queue.Submit(cmd.Context(), queue.SubmitParams{
-				WorkspaceID: workspaceID,
+			pr, err := client.SubmitPR(cmd.Context(), &meshv1.SubmitPRRequest{
+				WorkspaceId: workspaceID,
 				Branch:      branch,
 				Title:       title,
 				Priority:    priority,
@@ -206,14 +218,14 @@ func prSubmitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "queued PR %s for branch %s (%s)\n", pr.ID, pr.Branch, pr.Status)
+			fmt.Fprintf(cmd.OutOrStdout(), "queued PR %s for branch %s (%s)\n", pr.GetId(), pr.GetBranch(), prStatusName(pr.GetStatus()))
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&workspaceID, "workspace", "", "owning workspace id (required)")
 	cmd.Flags().StringVar(&branch, "branch", "", "branch to open the PR from (required)")
 	cmd.Flags().StringVar(&title, "title", "", "PR title (required)")
-	cmd.Flags().IntVar(&priority, "priority", 0, "higher submits first")
+	cmd.Flags().Int32Var(&priority, "priority", 0, "higher submits first")
 	_ = cmd.MarkFlagRequired("workspace")
 	_ = cmd.MarkFlagRequired("branch")
 	_ = cmd.MarkFlagRequired("title")
@@ -226,24 +238,33 @@ func prListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List queued PRs by status",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
+			defer closeConn()
 
-			prs, err := d.Queue.List(cmd.Context(), queue.Status(status))
+			stream, err := client.ListPRs(cmd.Context(), &meshv1.ListPRsRequest{Status: prStatusValue(status)})
 			if err != nil {
 				return err
-			}
-			if len(prs) == 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "no %s PRs\n", status)
-				return nil
 			}
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "ID\tBRANCH\tPRIORITY\tSTATUS\tATTEMPTS")
-			for _, pr := range prs {
-				fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%d\n", pr.ID, pr.Branch, pr.Priority, pr.Status, pr.Attempts)
+			n := 0
+			for {
+				pr, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				n++
+				fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%d\n", pr.GetId(), pr.GetBranch(), pr.GetPriority(), prStatusName(pr.GetStatus()), pr.GetAttempts())
+			}
+			if n == 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "no %s PRs\n", status)
+				return nil
 			}
 			return w.Flush()
 		},
@@ -257,25 +278,78 @@ func gcCmd() *cobra.Command {
 		Use:   "gc",
 		Short: "Reclaim orphaned worktrees with no active workspace",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			d, err := openCore(cmd)
+			client, closeConn, err := dial(cmd)
 			if err != nil {
 				return err
 			}
-			defer d.Close()
-			reclaimed, err := d.Workspaces.GC(cmd.Context())
+			defer closeConn()
+
+			stream, err := client.ReclaimWorktrees(cmd.Context(), &meshv1.ReclaimWorktreesRequest{})
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "reclaimed %d worktree(s)\n", len(reclaimed))
+			n := 0
+			for {
+				_, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				n++
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "reclaimed %d worktree(s)\n", n)
 			return nil
 		},
 	}
 }
 
-// cmp returns a if non-empty, otherwise b.
-func cmp(a, b string) string {
+// orDefault returns a if non-empty, otherwise b.
+func orDefault(a, b string) string {
 	if a != "" {
 		return a
 	}
 	return b
+}
+
+func workspaceStatusName(s meshv1.WorkspaceStatus) string {
+	switch s {
+	case meshv1.WorkspaceStatus_WORKSPACE_STATUS_ACTIVE:
+		return "active"
+	case meshv1.WorkspaceStatus_WORKSPACE_STATUS_DONE:
+		return "done"
+	case meshv1.WorkspaceStatus_WORKSPACE_STATUS_ERROR:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
+
+func prStatusName(s meshv1.PRStatus) string {
+	switch s {
+	case meshv1.PRStatus_PR_STATUS_QUEUED:
+		return "queued"
+	case meshv1.PRStatus_PR_STATUS_SUBMITTED:
+		return "submitted"
+	case meshv1.PRStatus_PR_STATUS_MERGED:
+		return "merged"
+	case meshv1.PRStatus_PR_STATUS_FAILED:
+		return "failed"
+	default:
+		return "unknown"
+	}
+}
+
+func prStatusValue(name string) meshv1.PRStatus {
+	switch name {
+	case "submitted":
+		return meshv1.PRStatus_PR_STATUS_SUBMITTED
+	case "merged":
+		return meshv1.PRStatus_PR_STATUS_MERGED
+	case "failed":
+		return meshv1.PRStatus_PR_STATUS_FAILED
+	default:
+		return meshv1.PRStatus_PR_STATUS_QUEUED
+	}
 }

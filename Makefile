@@ -19,6 +19,11 @@ build:
 	go build -o bin/mesh ./cmd/mesh
 	go build -o bin/meshd ./cmd/meshd
 
+# Generate protobuf + gRPC bindings from proto/mesh/v1.
+.PHONY: proto
+proto:
+	./scripts/gen-proto.sh
+
 # Generate type-safe Go from the SQL in internal/store/queries.
 # Requires: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 .PHONY: sqlc
