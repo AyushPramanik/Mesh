@@ -22,7 +22,7 @@ const enqueuePR = `-- name: EnqueuePR :one
 INSERT INTO pr_queue (id, workspace_id, branch, title, priority)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT (branch) DO UPDATE SET branch = excluded.branch
-RETURNING id, workspace_id, branch, title, priority, status, attempts, last_error, submitted_at, created_at
+RETURNING id, workspace_id, branch, title, priority, status, attempts, last_error, next_retry_at, submitted_at, created_at
 `
 
 type EnqueuePRParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) EnqueuePR(ctx context.Context, arg EnqueuePRParams) (PrQueue, 
 		&i.Status,
 		&i.Attempts,
 		&i.LastError,
+		&i.NextRetryAt,
 		&i.SubmittedAt,
 		&i.CreatedAt,
 	)
@@ -60,7 +61,7 @@ func (q *Queries) EnqueuePR(ctx context.Context, arg EnqueuePRParams) (PrQueue, 
 }
 
 const getPR = `-- name: GetPR :one
-SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, submitted_at, created_at FROM pr_queue WHERE id = ?
+SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, next_retry_at, submitted_at, created_at FROM pr_queue WHERE id = ?
 `
 
 func (q *Queries) GetPR(ctx context.Context, id string) (PrQueue, error) {
@@ -75,6 +76,7 @@ func (q *Queries) GetPR(ctx context.Context, id string) (PrQueue, error) {
 		&i.Status,
 		&i.Attempts,
 		&i.LastError,
+		&i.NextRetryAt,
 		&i.SubmittedAt,
 		&i.CreatedAt,
 	)
@@ -82,7 +84,7 @@ func (q *Queries) GetPR(ctx context.Context, id string) (PrQueue, error) {
 }
 
 const getPRByBranch = `-- name: GetPRByBranch :one
-SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, submitted_at, created_at FROM pr_queue WHERE branch = ?
+SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, next_retry_at, submitted_at, created_at FROM pr_queue WHERE branch = ?
 `
 
 func (q *Queries) GetPRByBranch(ctx context.Context, branch string) (PrQueue, error) {
@@ -97,14 +99,59 @@ func (q *Queries) GetPRByBranch(ctx context.Context, branch string) (PrQueue, er
 		&i.Status,
 		&i.Attempts,
 		&i.LastError,
+		&i.NextRetryAt,
 		&i.SubmittedAt,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const listDuePRs = `-- name: ListDuePRs :many
+SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, next_retry_at, submitted_at, created_at FROM pr_queue
+WHERE status = 'queued'
+  AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
+ORDER BY priority DESC, created_at ASC
+`
+
+// Queued PRs eligible to process now: never deferred, or past their backoff.
+// Same scan order as ListPRsByStatus.
+func (q *Queries) ListDuePRs(ctx context.Context) ([]PrQueue, error) {
+	rows, err := q.db.QueryContext(ctx, listDuePRs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PrQueue{}
+	for rows.Next() {
+		var i PrQueue
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Branch,
+			&i.Title,
+			&i.Priority,
+			&i.Status,
+			&i.Attempts,
+			&i.LastError,
+			&i.NextRetryAt,
+			&i.SubmittedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPRsByStatus = `-- name: ListPRsByStatus :many
-SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, submitted_at, created_at FROM pr_queue
+SELECT id, workspace_id, branch, title, priority, status, attempts, last_error, next_retry_at, submitted_at, created_at FROM pr_queue
 WHERE status = ?
 ORDER BY priority DESC, created_at ASC
 `
@@ -128,6 +175,7 @@ func (q *Queries) ListPRsByStatus(ctx context.Context, status string) ([]PrQueue
 			&i.Status,
 			&i.Attempts,
 			&i.LastError,
+			&i.NextRetryAt,
 			&i.SubmittedAt,
 			&i.CreatedAt,
 		); err != nil {
@@ -166,9 +214,31 @@ type RecordPRFailureParams struct {
 	ID        string  `json:"id"`
 }
 
-// Record a failed submission attempt for exponential-backoff retry.
+// Terminally fail a PR (permanent error or retries exhausted).
 func (q *Queries) RecordPRFailure(ctx context.Context, arg RecordPRFailureParams) error {
 	_, err := q.db.ExecContext(ctx, recordPRFailure, arg.LastError, arg.ID)
+	return err
+}
+
+const requeuePR = `-- name: RequeuePR :exec
+UPDATE pr_queue
+SET status = 'queued',
+    attempts = attempts + 1,
+    last_error = ?1,
+    next_retry_at = datetime('now', ?2)
+WHERE id = ?3
+`
+
+type RequeuePRParams struct {
+	LastError *string     `json:"last_error"`
+	Backoff   interface{} `json:"backoff"`
+	ID        string      `json:"id"`
+}
+
+// Defer a PR after a transient failure: back to queued, attempt counted, and
+// not retried until now + the given SQLite modifier (e.g. '+8 seconds').
+func (q *Queries) RequeuePR(ctx context.Context, arg RequeuePRParams) error {
+	_, err := q.db.ExecContext(ctx, requeuePR, arg.LastError, arg.Backoff, arg.ID)
 	return err
 }
 

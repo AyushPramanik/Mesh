@@ -25,19 +25,25 @@ type Querier interface {
 	GetPRByBranch(ctx context.Context, branch string) (PrQueue, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	ListAgents(ctx context.Context) ([]Agent, error)
+	// Queued PRs eligible to process now: never deferred, or past their backoff.
+	// Same scan order as ListPRsByStatus.
+	ListDuePRs(ctx context.Context) ([]PrQueue, error)
 	// Scheduler scan order: highest priority first, then oldest submission.
 	ListPRsByStatus(ctx context.Context, status string) ([]PrQueue, error)
 	ListWorkspaces(ctx context.Context) ([]Workspace, error)
 	ListWorkspacesByAgent(ctx context.Context, agentID string) ([]Workspace, error)
 	ListWorkspacesByStatus(ctx context.Context, status string) ([]Workspace, error)
 	MarkPRSubmitted(ctx context.Context, id string) error
-	// Record a failed submission attempt for exponential-backoff retry.
+	// Terminally fail a PR (permanent error or retries exhausted).
 	RecordPRFailure(ctx context.Context, arg RecordPRFailureParams) error
 	// Register an agent, or update its name if the id already exists. Idempotent so
 	// a reconnecting agent does not error.
 	RegisterAgent(ctx context.Context, arg RegisterAgentParams) (Agent, error)
 	ReleaseIntent(ctx context.Context, id string) error
 	ReleaseWorkspaceIntents(ctx context.Context, workspaceID string) error
+	// Defer a PR after a transient failure: back to queued, attempt counted, and
+	// not retried until now + the given SQLite modifier (e.g. '+8 seconds').
+	RequeuePR(ctx context.Context, arg RequeuePRParams) error
 	SetPRStatus(ctx context.Context, arg SetPRStatusParams) error
 	SetWorkspaceStatus(ctx context.Context, arg SetWorkspaceStatusParams) error
 }

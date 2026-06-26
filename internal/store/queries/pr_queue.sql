@@ -18,6 +18,14 @@ SELECT * FROM pr_queue
 WHERE status = ?
 ORDER BY priority DESC, created_at ASC;
 
+-- name: ListDuePRs :many
+-- Queued PRs eligible to process now: never deferred, or past their backoff.
+-- Same scan order as ListPRsByStatus.
+SELECT * FROM pr_queue
+WHERE status = 'queued'
+  AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
+ORDER BY priority DESC, created_at ASC;
+
 -- name: SetPRStatus :exec
 UPDATE pr_queue SET status = ? WHERE id = ?;
 
@@ -26,8 +34,18 @@ UPDATE pr_queue
 SET status = 'submitted', submitted_at = datetime('now')
 WHERE id = ?;
 
+-- name: RequeuePR :exec
+-- Defer a PR after a transient failure: back to queued, attempt counted, and
+-- not retried until now + the given SQLite modifier (e.g. '+8 seconds').
+UPDATE pr_queue
+SET status = 'queued',
+    attempts = attempts + 1,
+    last_error = sqlc.arg(last_error),
+    next_retry_at = datetime('now', sqlc.arg(backoff))
+WHERE id = sqlc.arg(id);
+
 -- name: RecordPRFailure :exec
--- Record a failed submission attempt for exponential-backoff retry.
+-- Terminally fail a PR (permanent error or retries exhausted).
 UPDATE pr_queue
 SET status = 'failed', attempts = attempts + 1, last_error = ?
 WHERE id = ?;

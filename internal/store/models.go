@@ -31,6 +31,7 @@ type PrQueue struct {
 	Status      string  `json:"status"`
 	Attempts    int64   `json:"attempts"`
 	LastError   *string `json:"last_error"`
+	NextRetryAt *string `json:"next_retry_at"`
 	SubmittedAt *string `json:"submitted_at"`
 	CreatedAt   string  `json:"created_at"`
 }

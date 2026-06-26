@@ -10,12 +10,16 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 
+	"github.com/AyushPramanik/mesh/internal/conflict"
 	"github.com/AyushPramanik/mesh/internal/git"
+	"github.com/AyushPramanik/mesh/internal/github"
+	"github.com/AyushPramanik/mesh/internal/queue"
 	"github.com/AyushPramanik/mesh/internal/store"
 	"github.com/AyushPramanik/mesh/internal/workspace"
 )
@@ -28,6 +32,12 @@ type Daemon struct {
 	Store      *store.Store
 	Repo       *git.Repo
 	Workspaces *workspace.Manager
+	Conflicts  *conflict.Predictor
+	Queue      *queue.Queue
+
+	// processQueue is true when a PR submitter is configured; only then does
+	// Run drain the queue (otherwise PRs enqueue and wait).
+	processQueue bool
 }
 
 // New opens the git repository and store described by cfg and wires the
@@ -49,14 +59,45 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		return nil, fmt.Errorf("daemon.New: %w", err)
 	}
 
+	// A configured GitHub client processes the queue; otherwise PRs accumulate
+	// until credentials are supplied, rather than failing on submission.
+	var submitter queue.Submitter = disabledSubmitter{}
+	processQueue := false
+	if cfg.GitHub.Configured() {
+		client, err := github.New(github.Config{
+			Token: cfg.GitHub.Token,
+			Owner: cfg.GitHub.Owner,
+			Repo:  cfg.GitHub.Repo,
+			Base:  cfg.GitHub.Base,
+		})
+		if err != nil {
+			st.Close()
+			return nil, fmt.Errorf("daemon.New: %w", err)
+		}
+		submitter = client
+		processQueue = true
+	}
+
 	d := &Daemon{
-		cfg:        cfg,
-		log:        log,
-		Store:      st,
-		Repo:       repo,
-		Workspaces: workspace.NewManager(repo, st),
+		cfg:          cfg,
+		log:          log,
+		Store:        st,
+		Repo:         repo,
+		Workspaces:   workspace.NewManager(repo, st),
+		Conflicts:    conflict.New(st),
+		Queue:        queue.New(st, submitter),
+		processQueue: processQueue,
 	}
 	return d, nil
+}
+
+// disabledSubmitter is used when no GitHub credentials are configured. It is
+// never invoked, because the queue processing loop only runs when a real
+// submitter is present, but it satisfies queue.New's non-nil contract.
+type disabledSubmitter struct{}
+
+func (disabledSubmitter) Submit(context.Context, queue.PR) error {
+	return errors.New("no PR submitter configured")
 }
 
 // Run starts the daemon: it reclaims orphaned worktrees left by a previous
@@ -81,6 +122,18 @@ func (d *Daemon) Run(ctx context.Context) error {
 	}
 	defer lis.Close()
 	defer os.Remove(d.cfg.SocketPath)
+
+	// Drain the PR queue in the background when a submitter is configured.
+	if d.processQueue {
+		go func() {
+			if err := d.Queue.Run(ctx, d.cfg.ProcessInterval); err != nil && !errors.Is(err, context.Canceled) {
+				d.log.Error("pr queue processing stopped", "error", err)
+			}
+		}()
+		d.log.Info("pr queue processing enabled", "interval", d.cfg.ProcessInterval)
+	} else {
+		d.log.Info("pr queue processing disabled (no GitHub credentials); PRs will be queued only")
+	}
 
 	d.log.Info("mesh daemon ready",
 		"repo", d.cfg.RepoDir,

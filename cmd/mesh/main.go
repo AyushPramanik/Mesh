@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/AyushPramanik/mesh/internal/daemon"
+	"github.com/AyushPramanik/mesh/internal/queue"
 	"github.com/AyushPramanik/mesh/internal/store"
 	"github.com/AyushPramanik/mesh/internal/workspace"
 )
@@ -38,7 +39,7 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "git repository to operate on (default: cwd)")
 	root.PersistentFlags().BoolVar(&flagDev, "dev", false, "verbose logging")
 
-	root.AddCommand(workspaceCmd(), gcCmd())
+	root.AddCommand(workspaceCmd(), prCmd(), gcCmd())
 	return root
 }
 
@@ -172,6 +173,83 @@ func workspaceRmCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func prCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pr",
+		Short: "Submit and inspect pull requests in the queue",
+	}
+	cmd.AddCommand(prSubmitCmd(), prListCmd())
+	return cmd
+}
+
+func prSubmitCmd() *cobra.Command {
+	var workspaceID, branch, title string
+	var priority int
+	cmd := &cobra.Command{
+		Use:   "submit",
+		Short: "Queue a pull request for a workspace branch",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			d, err := openCore(cmd)
+			if err != nil {
+				return err
+			}
+			defer d.Close()
+
+			pr, err := d.Queue.Submit(cmd.Context(), queue.SubmitParams{
+				WorkspaceID: workspaceID,
+				Branch:      branch,
+				Title:       title,
+				Priority:    priority,
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "queued PR %s for branch %s (%s)\n", pr.ID, pr.Branch, pr.Status)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&workspaceID, "workspace", "", "owning workspace id (required)")
+	cmd.Flags().StringVar(&branch, "branch", "", "branch to open the PR from (required)")
+	cmd.Flags().StringVar(&title, "title", "", "PR title (required)")
+	cmd.Flags().IntVar(&priority, "priority", 0, "higher submits first")
+	_ = cmd.MarkFlagRequired("workspace")
+	_ = cmd.MarkFlagRequired("branch")
+	_ = cmd.MarkFlagRequired("title")
+	return cmd
+}
+
+func prListCmd() *cobra.Command {
+	var status string
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List queued PRs by status",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			d, err := openCore(cmd)
+			if err != nil {
+				return err
+			}
+			defer d.Close()
+
+			prs, err := d.Queue.List(cmd.Context(), queue.Status(status))
+			if err != nil {
+				return err
+			}
+			if len(prs) == 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "no %s PRs\n", status)
+				return nil
+			}
+			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+			fmt.Fprintln(w, "ID\tBRANCH\tPRIORITY\tSTATUS\tATTEMPTS")
+			for _, pr := range prs {
+				fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%d\n", pr.ID, pr.Branch, pr.Priority, pr.Status, pr.Attempts)
+			}
+			return w.Flush()
+		},
+	}
+	cmd.Flags().StringVar(&status, "status", "queued", "queued | submitted | merged | failed")
+	return cmd
 }
 
 func gcCmd() *cobra.Command {

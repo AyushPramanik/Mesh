@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Config locates the repository Mesh orchestrates and the local state derived
@@ -18,6 +19,25 @@ type Config struct {
 	SocketPath string
 	// Dev enables verbose logging.
 	Dev bool
+	// GitHub configures PR submission. When incomplete, the daemon enqueues
+	// PRs but does not process them.
+	GitHub GitHubConfig
+	// ProcessInterval is how often the daemon drains the PR queue.
+	ProcessInterval time.Duration
+}
+
+// GitHubConfig is the credentials and target repository for PR submission. It
+// is populated from the environment by DefaultConfig.
+type GitHubConfig struct {
+	Token string
+	Owner string
+	Repo  string
+	Base  string
+}
+
+// Configured reports whether enough is set to submit PRs.
+func (g GitHubConfig) Configured() bool {
+	return g.Token != "" && g.Owner != "" && g.Repo != ""
 }
 
 // DefaultConfig resolves a Config for the repository at repoDir, filling in the
@@ -42,6 +62,13 @@ func DefaultConfig(repoDir string) (Config, error) {
 		StateDir:   stateDir,
 		SocketPath: filepath.Join(stateDir, "mesh.sock"),
 		Dev:        false,
+		GitHub: GitHubConfig{
+			Token: os.Getenv("GITHUB_TOKEN"),
+			Owner: os.Getenv("GITHUB_OWNER"),
+			Repo:  os.Getenv("GITHUB_REPO"),
+			Base:  os.Getenv("GITHUB_BASE"),
+		},
+		ProcessInterval: 10 * time.Second,
 	}, nil
 }
 

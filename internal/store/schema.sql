@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS pr_queue (
     status       TEXT NOT NULL DEFAULT 'queued',
     attempts     INTEGER NOT NULL DEFAULT 0,
     last_error   TEXT,
+    -- Earliest time a requeued PR may be retried; NULL means immediately. Drives
+    -- exponential backoff without a separate scheduler.
+    next_retry_at TEXT,
     submitted_at TEXT,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
