@@ -38,6 +38,10 @@ service MeshService {
 
   // ListPRs streams queued PRs filtered by status.
   rpc ListPRs(ListPRsRequest) returns (stream PullRequest);
+
+  // PlanTrains streams the merge trains planned from the queued PRs, highest
+  // priority first.
+  rpc PlanTrains(PlanTrainsRequest) returns (stream Train);
 }
 
 message Agent {
@@ -151,4 +155,11 @@ message SubmitPRRequest {
 
 message ListPRsRequest {
   PRStatus status = 1;
+}
+
+message PlanTrainsRequest {}
+
+// A Train is a batch of PRs that can land together without conflicting.
+message Train {
+  repeated PullRequest prs = 1;
 }

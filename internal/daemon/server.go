@@ -136,6 +136,23 @@ func (s *server) ListPRs(req *meshv1.ListPRsRequest, stream grpc.ServerStreaming
 	return nil
 }
 
+func (s *server) PlanTrains(_ *meshv1.PlanTrainsRequest, stream grpc.ServerStreamingServer[meshv1.Train]) error {
+	trains, err := s.d.Scheduler.Plan(stream.Context())
+	if err != nil {
+		return grpcErr(err)
+	}
+	for _, train := range trains {
+		prs := make([]*meshv1.PullRequest, len(train.PRs))
+		for i, pr := range train.PRs {
+			prs[i] = prProto(pr)
+		}
+		if err := stream.Send(&meshv1.Train{Prs: prs}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // grpcErr maps a domain error to a gRPC status. The mapping is coarse for now;
 // typed sentinel errors can refine the codes as the domain grows.
 func grpcErr(err error) error {

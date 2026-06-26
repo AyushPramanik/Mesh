@@ -192,8 +192,47 @@ func prCmd() *cobra.Command {
 		Use:   "pr",
 		Short: "Submit and inspect pull requests in the queue",
 	}
-	cmd.AddCommand(prSubmitCmd(), prListCmd())
+	cmd.AddCommand(prSubmitCmd(), prListCmd(), prTrainsCmd())
 	return cmd
+}
+
+func prTrainsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "trains",
+		Short: "Show the merge trains planned from queued PRs",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			stream, err := client.PlanTrains(cmd.Context(), &meshv1.PlanTrainsRequest{})
+			if err != nil {
+				return err
+			}
+			n := 0
+			for {
+				train, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				n++
+				branches := make([]string, len(train.GetPrs()))
+				for i, pr := range train.GetPrs() {
+					branches[i] = pr.GetBranch()
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "train %d: %v\n", n, branches)
+			}
+			if n == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "no queued PRs to plan")
+			}
+			return nil
+		},
+	}
 }
 
 func prSubmitCmd() *cobra.Command {

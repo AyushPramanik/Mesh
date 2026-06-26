@@ -32,6 +32,7 @@ const (
 	MeshService_RegisterIntent_FullMethodName   = "/mesh.v1.MeshService/RegisterIntent"
 	MeshService_SubmitPR_FullMethodName         = "/mesh.v1.MeshService/SubmitPR"
 	MeshService_ListPRs_FullMethodName          = "/mesh.v1.MeshService/ListPRs"
+	MeshService_PlanTrains_FullMethodName       = "/mesh.v1.MeshService/PlanTrains"
 )
 
 // MeshServiceClient is the client API for MeshService service.
@@ -61,6 +62,9 @@ type MeshServiceClient interface {
 	SubmitPR(ctx context.Context, in *SubmitPRRequest, opts ...grpc.CallOption) (*PullRequest, error)
 	// ListPRs streams queued PRs filtered by status.
 	ListPRs(ctx context.Context, in *ListPRsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PullRequest], error)
+	// PlanTrains streams the merge trains planned from the queued PRs, highest
+	// priority first.
+	PlanTrains(ctx context.Context, in *PlanTrainsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Train], error)
 }
 
 type meshServiceClient struct {
@@ -198,6 +202,25 @@ func (c *meshServiceClient) ListPRs(ctx context.Context, in *ListPRsRequest, opt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_ListPRsClient = grpc.ServerStreamingClient[PullRequest]
 
+func (c *meshServiceClient) PlanTrains(ctx context.Context, in *PlanTrainsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Train], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MeshService_ServiceDesc.Streams[3], MeshService_PlanTrains_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[PlanTrainsRequest, Train]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_PlanTrainsClient = grpc.ServerStreamingClient[Train]
+
 // MeshServiceServer is the server API for MeshService service.
 // All implementations must embed UnimplementedMeshServiceServer
 // for forward compatibility.
@@ -225,6 +248,9 @@ type MeshServiceServer interface {
 	SubmitPR(context.Context, *SubmitPRRequest) (*PullRequest, error)
 	// ListPRs streams queued PRs filtered by status.
 	ListPRs(*ListPRsRequest, grpc.ServerStreamingServer[PullRequest]) error
+	// PlanTrains streams the merge trains planned from the queued PRs, highest
+	// priority first.
+	PlanTrains(*PlanTrainsRequest, grpc.ServerStreamingServer[Train]) error
 	mustEmbedUnimplementedMeshServiceServer()
 }
 
@@ -264,6 +290,9 @@ func (UnimplementedMeshServiceServer) SubmitPR(context.Context, *SubmitPRRequest
 }
 func (UnimplementedMeshServiceServer) ListPRs(*ListPRsRequest, grpc.ServerStreamingServer[PullRequest]) error {
 	return status.Error(codes.Unimplemented, "method ListPRs not implemented")
+}
+func (UnimplementedMeshServiceServer) PlanTrains(*PlanTrainsRequest, grpc.ServerStreamingServer[Train]) error {
+	return status.Error(codes.Unimplemented, "method PlanTrains not implemented")
 }
 func (UnimplementedMeshServiceServer) mustEmbedUnimplementedMeshServiceServer() {}
 func (UnimplementedMeshServiceServer) testEmbeddedByValue()                     {}
@@ -445,6 +474,17 @@ func _MeshService_ListPRs_Handler(srv interface{}, stream grpc.ServerStream) err
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_ListPRsServer = grpc.ServerStreamingServer[PullRequest]
 
+func _MeshService_PlanTrains_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PlanTrainsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MeshServiceServer).PlanTrains(m, &grpc.GenericServerStream[PlanTrainsRequest, Train]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_PlanTrainsServer = grpc.ServerStreamingServer[Train]
+
 // MeshService_ServiceDesc is the grpc.ServiceDesc for MeshService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -495,6 +535,11 @@ var MeshService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ListPRs",
 			Handler:       _MeshService_ListPRs_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "PlanTrains",
+			Handler:       _MeshService_PlanTrains_Handler,
 			ServerStreams: true,
 		},
 	},

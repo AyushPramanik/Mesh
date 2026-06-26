@@ -1121,6 +1121,87 @@ func (x *ListPRsRequest) GetStatus() PRStatus {
 	return PRStatus_PR_STATUS_UNSPECIFIED
 }
 
+type PlanTrainsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlanTrainsRequest) Reset() {
+	*x = PlanTrainsRequest{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlanTrainsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlanTrainsRequest) ProtoMessage() {}
+
+func (x *PlanTrainsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlanTrainsRequest.ProtoReflect.Descriptor instead.
+func (*PlanTrainsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{18}
+}
+
+// A Train is a batch of PRs that can land together without conflicting.
+type Train struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prs           []*PullRequest         `protobuf:"bytes,1,rep,name=prs,proto3" json:"prs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Train) Reset() {
+	*x = Train{}
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Train) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Train) ProtoMessage() {}
+
+func (x *Train) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mesh_v1_mesh_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Train.ProtoReflect.Descriptor instead.
+func (*Train) Descriptor() ([]byte, []int) {
+	return file_proto_mesh_v1_mesh_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *Train) GetPrs() []*PullRequest {
+	if x != nil {
+		return x.Prs
+	}
+	return nil
+}
+
 var File_proto_mesh_v1_mesh_proto protoreflect.FileDescriptor
 
 const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
@@ -1179,7 +1260,10 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpriority\x18\x04 \x01(\x05R\bpriority\";\n" +
 	"\x0eListPRsRequest\x12)\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x11.mesh.v1.PRStatusR\x06status*\x87\x01\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x11.mesh.v1.PRStatusR\x06status\"\x13\n" +
+	"\x11PlanTrainsRequest\"/\n" +
+	"\x05Train\x12&\n" +
+	"\x03prs\x18\x01 \x03(\v2\x14.mesh.v1.PullRequestR\x03prs*\x87\x01\n" +
 	"\x0fWorkspaceStatus\x12 \n" +
 	"\x1cWORKSPACE_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17WORKSPACE_STATUS_ACTIVE\x10\x01\x12\x19\n" +
@@ -1194,7 +1278,7 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\x10PR_STATUS_QUEUED\x10\x01\x12\x17\n" +
 	"\x13PR_STATUS_SUBMITTED\x10\x02\x12\x14\n" +
 	"\x10PR_STATUS_MERGED\x10\x03\x12\x14\n" +
-	"\x10PR_STATUS_FAILED\x10\x042\xd9\x05\n" +
+	"\x10PR_STATUS_FAILED\x10\x042\x95\x06\n" +
 	"\vMeshService\x12>\n" +
 	"\rRegisterAgent\x12\x1d.mesh.v1.RegisterAgentRequest\x1a\x0e.mesh.v1.Agent\x12F\n" +
 	"\x0fCreateWorkspace\x12\x1f.mesh.v1.CreateWorkspaceRequest\x1a\x12.mesh.v1.Workspace\x12F\n" +
@@ -1205,7 +1289,9 @@ const file_proto_mesh_v1_mesh_proto_rawDesc = "" +
 	"\vCheckIntent\x12\x1b.mesh.v1.CheckIntentRequest\x1a\x11.mesh.v1.Decision\x12Q\n" +
 	"\x0eRegisterIntent\x12\x1e.mesh.v1.RegisterIntentRequest\x1a\x1f.mesh.v1.RegisterIntentResponse\x12:\n" +
 	"\bSubmitPR\x12\x18.mesh.v1.SubmitPRRequest\x1a\x14.mesh.v1.PullRequest\x12:\n" +
-	"\aListPRs\x12\x17.mesh.v1.ListPRsRequest\x1a\x14.mesh.v1.PullRequest0\x01B4Z2github.com/AyushPramanik/mesh/proto/mesh/v1;meshv1b\x06proto3"
+	"\aListPRs\x12\x17.mesh.v1.ListPRsRequest\x1a\x14.mesh.v1.PullRequest0\x01\x12:\n" +
+	"\n" +
+	"PlanTrains\x12\x1a.mesh.v1.PlanTrainsRequest\x1a\x0e.mesh.v1.Train0\x01B4Z2github.com/AyushPramanik/mesh/proto/mesh/v1;meshv1b\x06proto3"
 
 var (
 	file_proto_mesh_v1_mesh_proto_rawDescOnce sync.Once
@@ -1220,7 +1306,7 @@ func file_proto_mesh_v1_mesh_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_mesh_v1_mesh_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_proto_mesh_v1_mesh_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(WorkspaceStatus)(0),            // 0: mesh.v1.WorkspaceStatus
 	(Verdict)(0),                    // 1: mesh.v1.Verdict
@@ -1243,6 +1329,8 @@ var file_proto_mesh_v1_mesh_proto_goTypes = []any{
 	(*PullRequest)(nil),             // 18: mesh.v1.PullRequest
 	(*SubmitPRRequest)(nil),         // 19: mesh.v1.SubmitPRRequest
 	(*ListPRsRequest)(nil),          // 20: mesh.v1.ListPRsRequest
+	(*PlanTrainsRequest)(nil),       // 21: mesh.v1.PlanTrainsRequest
+	(*Train)(nil),                   // 22: mesh.v1.Train
 }
 var file_proto_mesh_v1_mesh_proto_depIdxs = []int32{
 	0,  // 0: mesh.v1.Workspace.status:type_name -> mesh.v1.WorkspaceStatus
@@ -1251,31 +1339,34 @@ var file_proto_mesh_v1_mesh_proto_depIdxs = []int32{
 	14, // 3: mesh.v1.RegisterIntentResponse.decision:type_name -> mesh.v1.Decision
 	2,  // 4: mesh.v1.PullRequest.status:type_name -> mesh.v1.PRStatus
 	2,  // 5: mesh.v1.ListPRsRequest.status:type_name -> mesh.v1.PRStatus
-	4,  // 6: mesh.v1.MeshService.RegisterAgent:input_type -> mesh.v1.RegisterAgentRequest
-	6,  // 7: mesh.v1.MeshService.CreateWorkspace:input_type -> mesh.v1.CreateWorkspaceRequest
-	7,  // 8: mesh.v1.MeshService.ListWorkspaces:input_type -> mesh.v1.ListWorkspacesRequest
-	8,  // 9: mesh.v1.MeshService.FinishWorkspace:input_type -> mesh.v1.FinishWorkspaceRequest
-	9,  // 10: mesh.v1.MeshService.DeleteWorkspace:input_type -> mesh.v1.DeleteWorkspaceRequest
-	11, // 11: mesh.v1.MeshService.ReclaimWorktrees:input_type -> mesh.v1.ReclaimWorktreesRequest
-	15, // 12: mesh.v1.MeshService.CheckIntent:input_type -> mesh.v1.CheckIntentRequest
-	16, // 13: mesh.v1.MeshService.RegisterIntent:input_type -> mesh.v1.RegisterIntentRequest
-	19, // 14: mesh.v1.MeshService.SubmitPR:input_type -> mesh.v1.SubmitPRRequest
-	20, // 15: mesh.v1.MeshService.ListPRs:input_type -> mesh.v1.ListPRsRequest
-	3,  // 16: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
-	5,  // 17: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
-	5,  // 18: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
-	5,  // 19: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
-	10, // 20: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
-	12, // 21: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
-	14, // 22: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
-	17, // 23: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
-	18, // 24: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
-	18, // 25: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
-	16, // [16:26] is the sub-list for method output_type
-	6,  // [6:16] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	18, // 6: mesh.v1.Train.prs:type_name -> mesh.v1.PullRequest
+	4,  // 7: mesh.v1.MeshService.RegisterAgent:input_type -> mesh.v1.RegisterAgentRequest
+	6,  // 8: mesh.v1.MeshService.CreateWorkspace:input_type -> mesh.v1.CreateWorkspaceRequest
+	7,  // 9: mesh.v1.MeshService.ListWorkspaces:input_type -> mesh.v1.ListWorkspacesRequest
+	8,  // 10: mesh.v1.MeshService.FinishWorkspace:input_type -> mesh.v1.FinishWorkspaceRequest
+	9,  // 11: mesh.v1.MeshService.DeleteWorkspace:input_type -> mesh.v1.DeleteWorkspaceRequest
+	11, // 12: mesh.v1.MeshService.ReclaimWorktrees:input_type -> mesh.v1.ReclaimWorktreesRequest
+	15, // 13: mesh.v1.MeshService.CheckIntent:input_type -> mesh.v1.CheckIntentRequest
+	16, // 14: mesh.v1.MeshService.RegisterIntent:input_type -> mesh.v1.RegisterIntentRequest
+	19, // 15: mesh.v1.MeshService.SubmitPR:input_type -> mesh.v1.SubmitPRRequest
+	20, // 16: mesh.v1.MeshService.ListPRs:input_type -> mesh.v1.ListPRsRequest
+	21, // 17: mesh.v1.MeshService.PlanTrains:input_type -> mesh.v1.PlanTrainsRequest
+	3,  // 18: mesh.v1.MeshService.RegisterAgent:output_type -> mesh.v1.Agent
+	5,  // 19: mesh.v1.MeshService.CreateWorkspace:output_type -> mesh.v1.Workspace
+	5,  // 20: mesh.v1.MeshService.ListWorkspaces:output_type -> mesh.v1.Workspace
+	5,  // 21: mesh.v1.MeshService.FinishWorkspace:output_type -> mesh.v1.Workspace
+	10, // 22: mesh.v1.MeshService.DeleteWorkspace:output_type -> mesh.v1.DeleteWorkspaceResponse
+	12, // 23: mesh.v1.MeshService.ReclaimWorktrees:output_type -> mesh.v1.ReclaimedWorktree
+	14, // 24: mesh.v1.MeshService.CheckIntent:output_type -> mesh.v1.Decision
+	17, // 25: mesh.v1.MeshService.RegisterIntent:output_type -> mesh.v1.RegisterIntentResponse
+	18, // 26: mesh.v1.MeshService.SubmitPR:output_type -> mesh.v1.PullRequest
+	18, // 27: mesh.v1.MeshService.ListPRs:output_type -> mesh.v1.PullRequest
+	22, // 28: mesh.v1.MeshService.PlanTrains:output_type -> mesh.v1.Train
+	18, // [18:29] is the sub-list for method output_type
+	7,  // [7:18] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_proto_mesh_v1_mesh_proto_init() }
@@ -1289,7 +1380,7 @@ func file_proto_mesh_v1_mesh_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mesh_v1_mesh_proto_rawDesc), len(file_proto_mesh_v1_mesh_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

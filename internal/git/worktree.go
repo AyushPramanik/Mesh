@@ -119,6 +119,34 @@ func (r *Repo) RemoveWorktree(ctx context.Context, name string) error {
 	return nil
 }
 
+// ChangedFiles returns the repository-relative paths that branch changes
+// relative to base, using the merge-base (three-dot) diff GitHub shows for a
+// pull request. The result is the file-level footprint the merge-train
+// scheduler compares for overlap.
+//
+// Like worktree lifecycle, this shells out to system git: a three-dot diff is
+// awkward to assemble correctly with go-git, and the call is read-only.
+func (r *Repo) ChangedFiles(ctx context.Context, base, branch string) ([]string, error) {
+	if r.dir == "" {
+		return nil, fmt.Errorf("git.ChangedFiles: in-memory repositories are unsupported")
+	}
+	out, err := r.runGit(ctx, "diff", "--name-only", base+"..."+branch)
+	if err != nil {
+		return nil, fmt.Errorf("git.ChangedFiles: %w", err)
+	}
+	var files []string
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	for scanner.Scan() {
+		if line := strings.TrimSpace(scanner.Text()); line != "" {
+			files = append(files, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("git.ChangedFiles: scan: %w", err)
+	}
+	return files, nil
+}
+
 // runGit runs a git subcommand in the repository's working tree and returns its
 // stdout. Stderr is folded into the returned error so failures are diagnosable.
 func (r *Repo) runGit(ctx context.Context, args ...string) ([]byte, error) {

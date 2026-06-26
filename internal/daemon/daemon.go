@@ -36,6 +36,7 @@ type Daemon struct {
 	Workspaces *workspace.Manager
 	Conflicts  *conflict.Predictor
 	Queue      *queue.Queue
+	Scheduler  *queue.Scheduler
 
 	// processQueue is true when a PR submitter is configured; only then does
 	// Run drain the queue (otherwise PRs enqueue and wait).
@@ -80,6 +81,12 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		processQueue = true
 	}
 
+	base := cfg.GitHub.Base
+	if base == "" {
+		base = "main"
+	}
+	q := queue.New(st, submitter)
+
 	d := &Daemon{
 		cfg:          cfg,
 		log:          log,
@@ -87,10 +94,22 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		Repo:         repo,
 		Workspaces:   workspace.NewManager(repo, st),
 		Conflicts:    conflict.New(st),
-		Queue:        queue.New(st, submitter),
+		Queue:        q,
+		Scheduler:    queue.NewScheduler(q, gitFileSource{repo: repo, base: base}),
 		processQueue: processQueue,
 	}
 	return d, nil
+}
+
+// gitFileSource adapts the git repo to queue.FileSource, reporting a branch's
+// footprint as its diff against the configured base branch.
+type gitFileSource struct {
+	repo *git.Repo
+	base string
+}
+
+func (g gitFileSource) ChangedFiles(ctx context.Context, branch string) ([]string, error) {
+	return g.repo.ChangedFiles(ctx, g.base, branch)
 }
 
 // disabledSubmitter is used when no GitHub credentials are configured. It is
