@@ -10,6 +10,18 @@ type Agent struct {
 	RegisteredAt string `json:"registered_at"`
 }
 
+type Intent struct {
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+	Status      string `json:"status"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type IntentFile struct {
+	IntentID string `json:"intent_id"`
+	Path     string `json:"path"`
+}
+
 type PrQueue struct {
 	ID          string  `json:"id"`
 	WorkspaceID string  `json:"workspace_id"`

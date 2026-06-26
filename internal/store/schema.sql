@@ -55,3 +55,28 @@ CREATE TABLE IF NOT EXISTS pr_queue (
 
 -- Scheduler scan order: highest priority first, then oldest submission.
 CREATE INDEX IF NOT EXISTS idx_pr_queue_scan ON pr_queue (status, priority DESC, created_at ASC);
+
+-- An intent is an agent's structured, best-effort declaration of what it is
+-- about to modify, registered before work starts. The conflict predictor
+-- cross-references active intents to clear or warn a new one. Intents are
+-- predictions, not locks (CLAUDE.md): actual conflicts are still caught later.
+CREATE TABLE IF NOT EXISTS intents (
+    id           TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
+    -- active | released
+    status       TEXT NOT NULL DEFAULT 'active',
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_intents_status ON intents (status);
+
+-- The files an intent expects to touch. Normalised out so overlap between
+-- intents is a join, not a scan of serialised blobs. File-level overlap is the
+-- first cut of conflict detection; AST-level edges arrive in a later layer.
+CREATE TABLE IF NOT EXISTS intent_files (
+    intent_id TEXT NOT NULL REFERENCES intents (id) ON DELETE CASCADE,
+    path      TEXT NOT NULL,
+    PRIMARY KEY (intent_id, path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_intent_files_path ON intent_files (path);

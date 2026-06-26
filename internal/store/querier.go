@@ -9,12 +9,17 @@ import (
 )
 
 type Querier interface {
+	AddIntentFile(ctx context.Context, arg AddIntentFileParams) error
+	CreateIntent(ctx context.Context, arg CreateIntentParams) (Intent, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	DeletePR(ctx context.Context, id string) error
 	DeleteWorkspace(ctx context.Context, id string) error
 	// Submit a PR to the queue. The branch is the dedupe key: submitting a branch
 	// that is already queued is a no-op that returns the existing row unchanged.
 	EnqueuePR(ctx context.Context, arg EnqueuePRParams) (PrQueue, error)
+	// Active intents owned by other workspaces that claim any of the given paths.
+	// This is the file-level overlap check at the heart of the conflict predictor.
+	FindOverlappingIntents(ctx context.Context, arg FindOverlappingIntentsParams) ([]FindOverlappingIntentsRow, error)
 	GetAgent(ctx context.Context, id string) (Agent, error)
 	GetPR(ctx context.Context, id string) (PrQueue, error)
 	GetPRByBranch(ctx context.Context, branch string) (PrQueue, error)
@@ -31,6 +36,8 @@ type Querier interface {
 	// Register an agent, or update its name if the id already exists. Idempotent so
 	// a reconnecting agent does not error.
 	RegisterAgent(ctx context.Context, arg RegisterAgentParams) (Agent, error)
+	ReleaseIntent(ctx context.Context, id string) error
+	ReleaseWorkspaceIntents(ctx context.Context, workspaceID string) error
 	SetPRStatus(ctx context.Context, arg SetPRStatusParams) error
 	SetWorkspaceStatus(ctx context.Context, arg SetWorkspaceStatusParams) error
 }
