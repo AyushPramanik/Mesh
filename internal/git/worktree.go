@@ -1,0 +1,171 @@
+package git
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// Worktree is a linked git worktree: an isolated working directory that shares
+// the parent repository's object store. It is the on-disk substrate for a Mesh
+// workspace, and so honours the workspace invariant from CLAUDE.md — exactly one
+// branch per worktree.
+type Worktree struct {
+	// Name is Mesh's handle for the worktree, unique within a repository.
+	Name string
+	// Branch is the branch checked out in the worktree.
+	Branch string
+	// Path is the absolute path of the worktree's working directory.
+	Path string
+}
+
+// worktreeRoot returns the directory under which Mesh materialises worktree
+// working directories. They live as a sibling of the main working tree so they
+// are never themselves tracked by the repository.
+func (r *Repo) worktreeRoot() string {
+	return filepath.Join(filepath.Dir(r.dir), filepath.Base(r.dir)+"-worktrees")
+}
+
+// CreateWorktree creates a linked worktree named name with a new branch, both
+// rooted at the current HEAD, and returns a handle to it.
+//
+// IMPLEMENTATION NOTE: go-git has no equivalent of `git worktree add`, so this
+// single concern shells out to the system git binary. This is the one
+// documented deviation from the go-git-only object layer (see package doc). The
+// repository must have at least one commit, since a worktree needs a commit-ish
+// to check out.
+func (r *Repo) CreateWorktree(ctx context.Context, name, branch string) (*Worktree, error) {
+	if r.dir == "" {
+		return nil, fmt.Errorf("git.CreateWorktree: in-memory repositories cannot host worktrees")
+	}
+	if err := validateName(name); err != nil {
+		return nil, fmt.Errorf("git.CreateWorktree: %w", err)
+	}
+
+	path := filepath.Join(r.worktreeRoot(), name)
+	if _, err := os.Stat(path); err == nil {
+		return nil, fmt.Errorf("git.CreateWorktree: worktree %q already exists", name)
+	}
+	if err := os.MkdirAll(r.worktreeRoot(), 0o755); err != nil {
+		return nil, fmt.Errorf("git.CreateWorktree: mkdir root: %w", err)
+	}
+
+	if _, err := r.runGit(ctx, "worktree", "add", "-b", branch, path, "HEAD"); err != nil {
+		return nil, fmt.Errorf("git.CreateWorktree: %w", err)
+	}
+	return &Worktree{Name: name, Branch: branch, Path: path}, nil
+}
+
+// ListWorktrees returns every linked worktree Mesh manages for this repository.
+// The main working tree is excluded — only linked worktrees are returned.
+func (r *Repo) ListWorktrees(ctx context.Context) ([]*Worktree, error) {
+	if r.dir == "" {
+		return nil, nil
+	}
+	out, err := r.runGit(ctx, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, fmt.Errorf("git.ListWorktrees: %w", err)
+	}
+
+	root := r.worktreeRoot()
+	var worktrees []*Worktree
+	var cur *Worktree
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.HasPrefix(line, "worktree "):
+			path := strings.TrimPrefix(line, "worktree ")
+			cur = &Worktree{Path: path, Name: filepath.Base(path)}
+		case strings.HasPrefix(line, "branch "):
+			if cur != nil {
+				// Porcelain reports the full ref, e.g. refs/heads/feature.
+				cur.Branch = strings.TrimPrefix(strings.TrimPrefix(line, "branch "), "refs/heads/")
+			}
+		case line == "":
+			// Blank line terminates a record. Keep only worktrees Mesh
+			// manages (those under worktreeRoot), skipping the main tree.
+			if cur != nil && isUnder(cur.Path, root) {
+				worktrees = append(worktrees, cur)
+			}
+			cur = nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("git.ListWorktrees: scan: %w", err)
+	}
+	if cur != nil && isUnder(cur.Path, root) {
+		worktrees = append(worktrees, cur)
+	}
+	return worktrees, nil
+}
+
+// RemoveWorktree deletes the linked worktree named name, removing both its
+// working directory and the repository's bookkeeping for it. It does not delete
+// the branch.
+func (r *Repo) RemoveWorktree(ctx context.Context, name string) error {
+	if r.dir == "" {
+		return fmt.Errorf("git.RemoveWorktree: in-memory repositories cannot host worktrees")
+	}
+	path := filepath.Join(r.worktreeRoot(), name)
+	if _, err := r.runGit(ctx, "worktree", "remove", "--force", path); err != nil {
+		return fmt.Errorf("git.RemoveWorktree: %w", err)
+	}
+	return nil
+}
+
+// runGit runs a git subcommand in the repository's working tree and returns its
+// stdout. Stderr is folded into the returned error so failures are diagnosable.
+func (r *Repo) runGit(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = r.dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return nil, fmt.Errorf("git %s: %s", strings.Join(args, " "), msg)
+	}
+	return stdout.Bytes(), nil
+}
+
+// validateName rejects worktree names that would escape the worktree root or
+// collide with path separators.
+func validateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("name must not be empty")
+	}
+	if strings.ContainsAny(name, `/\`) || name == "." || name == ".." {
+		return fmt.Errorf("invalid worktree name %q", name)
+	}
+	return nil
+}
+
+// isUnder reports whether path is contained in dir. Both are resolved through
+// any symlinks first, because `git worktree list` reports canonical paths (on
+// macOS /var is a symlink to /private/var) which would otherwise not match a
+// lexically-constructed root.
+func isUnder(path, dir string) bool {
+	rel, err := filepath.Rel(resolve(dir), resolve(path))
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// resolve returns path with symlinks evaluated, falling back to the cleaned
+// path if it cannot be resolved (e.g. it does not yet exist).
+func resolve(path string) string {
+	if r, err := filepath.EvalSymlinks(path); err == nil {
+		return r
+	}
+	return filepath.Clean(path)
+}
