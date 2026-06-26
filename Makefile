@@ -19,6 +19,12 @@ lint:
 build:
 	@echo "no binaries yet; cmd/mesh and cmd/meshd land in build-order step 4"
 
+# Generate type-safe Go from the SQL in internal/store/queries.
+# Requires: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+.PHONY: sqlc
+sqlc:
+	sqlc generate
+
 .PHONY: tidy
 tidy:
 	go mod tidy
