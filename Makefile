@@ -13,11 +13,11 @@ lint:
 	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run || \
 		echo "golangci-lint not installed; ran go vet only"
 
-# Cross-compile release binaries. Targets are added as cmd/mesh and cmd/meshd
-# land (build order step 4).
+# Build the CLI and daemon into ./bin for the host platform.
 .PHONY: build
 build:
-	@echo "no binaries yet; cmd/mesh and cmd/meshd land in build-order step 4"
+	go build -o bin/mesh ./cmd/mesh
+	go build -o bin/meshd ./cmd/meshd
 
 # Generate type-safe Go from the SQL in internal/store/queries.
 # Requires: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest

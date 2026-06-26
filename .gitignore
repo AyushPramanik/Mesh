@@ -9,6 +9,7 @@
 coverage.*
 
 # Mesh runtime state
+.mesh/
 *-worktrees/
 *.db
 *.db-shm
