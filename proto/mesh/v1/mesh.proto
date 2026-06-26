@@ -52,6 +52,13 @@ service MeshService {
   // AnalyzeConflicts streams the symbol-level (AST) conflicts between two
   // branches' changes — including dependency conflicts that share no files.
   rpc AnalyzeConflicts(AnalyzeConflictsRequest) returns (stream SemanticConflict);
+
+  // CheckGitHub reports the daemon's GitHub credential state.
+  rpc CheckGitHub(CheckGitHubRequest) returns (CheckGitHubResponse);
+
+  // LandTrain merges the next merge train into the base branch locally and
+  // streams the PRs it landed.
+  rpc LandTrain(LandTrainRequest) returns (stream LandedPR);
 }
 
 message Agent {
@@ -202,4 +209,19 @@ message SemanticConflict {
   // other references).
   string kind = 1;
   string symbol = 2;
+}
+
+message CheckGitHubRequest {}
+
+message CheckGitHubResponse {
+  // ok is true when credentials are valid and PR submission is active.
+  bool ok = 1;
+  string status = 2;
+}
+
+message LandTrainRequest {}
+
+message LandedPR {
+  string branch = 1;
+  string commit = 2;
 }

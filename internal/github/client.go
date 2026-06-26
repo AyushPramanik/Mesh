@@ -52,6 +52,72 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
+// Verify checks the credentials before the daemon relies on them, turning the
+// common failures (no/expired token, missing repo scope, wrong repo) into clear
+// messages instead of surfacing a stack trace at submission time.
+func (c *Client) Verify(ctx context.Context) error {
+	_, resp, err := c.api.Repositories.Get(ctx, c.owner, c.repo)
+	if err == nil {
+		// Token works and can see the repo; confirm it can also write.
+		if scopes := resp.Header.Get("X-OAuth-Scopes"); scopes != "" && !hasRepoScope(scopes) {
+			return fmt.Errorf("github: token lacks the 'repo' scope (has: %s) — create a token with repo access", scopes)
+		}
+		return nil
+	}
+
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			return fmt.Errorf("github: token is invalid or expired (401) — generate a new token with 'repo' scope")
+		case http.StatusForbidden:
+			return fmt.Errorf("github: token is forbidden (403) — it likely lacks the 'repo' scope or hit a rate limit")
+		case http.StatusNotFound:
+			return fmt.Errorf("github: %s/%s not found, or the token cannot access it (404) — check GITHUB_OWNER/GITHUB_REPO and that the token has 'repo' scope", c.owner, c.repo)
+		}
+	}
+	return fmt.Errorf("github: could not verify credentials: %w", err)
+}
+
+func hasRepoScope(scopes string) bool {
+	for _, s := range strings.Split(scopes, ",") {
+		if strings.TrimSpace(s) == "repo" {
+			return true
+		}
+	}
+	return false
+}
+
+// ParseRepoURL extracts the owner and repository name from a GitHub remote URL
+// in either SSH (git@github.com:owner/repo.git) or HTTPS
+// (https://github.com/owner/repo) form. ok is false when the URL is not a
+// recognisable GitHub remote.
+func ParseRepoURL(remote string) (owner, repo string, ok bool) {
+	s := strings.TrimSpace(remote)
+	switch {
+	case strings.HasPrefix(s, "git@"):
+		// git@github.com:owner/repo.git
+		if i := strings.Index(s, ":"); i >= 0 {
+			s = s[i+1:]
+		}
+	case strings.Contains(s, "://"):
+		// scheme://[user@]host/owner/repo
+		if i := strings.Index(s, "://"); i >= 0 {
+			s = s[i+3:]
+		}
+		if i := strings.Index(s, "/"); i >= 0 {
+			s = s[i+1:] // strip host
+		}
+	default:
+		return "", "", false
+	}
+	s = strings.TrimSuffix(s, ".git")
+	parts := strings.Split(s, "/")
+	if len(parts) < 2 || parts[len(parts)-2] == "" || parts[len(parts)-1] == "" {
+		return "", "", false
+	}
+	return parts[len(parts)-2], parts[len(parts)-1], true
+}
+
 // Submit opens a pull request for pr.Branch against the client's base branch.
 // A pull request that already exists for the branch is treated as success
 // (submission is idempotent from the queue's perspective). Rate-limit and

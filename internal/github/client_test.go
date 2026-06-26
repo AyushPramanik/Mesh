@@ -49,6 +49,26 @@ func TestClassify_NotFoundIsPermanent(t *testing.T) {
 	assert.False(t, queue.IsTransient(err))
 }
 
+func TestParseRepoURL(t *testing.T) {
+	cases := []struct {
+		url, owner, repo string
+		ok               bool
+	}{
+		{"git@github.com:AyushPramanik/Mesh.git", "AyushPramanik", "Mesh", true},
+		{"https://github.com/AyushPramanik/Mesh.git", "AyushPramanik", "Mesh", true},
+		{"https://github.com/AyushPramanik/Mesh", "AyushPramanik", "Mesh", true},
+		{"ssh://git@github.com/o/r.git", "o", "r", true},
+		{"not-a-url", "", "", false},
+		{"https://github.com/onlyowner", "", "", false},
+	}
+	for _, c := range cases {
+		owner, repo, ok := ParseRepoURL(c.url)
+		assert.Equal(t, c.ok, ok, c.url)
+		assert.Equal(t, c.owner, owner, c.url)
+		assert.Equal(t, c.repo, repo, c.url)
+	}
+}
+
 func TestNew_Validation(t *testing.T) {
 	_, err := New(Config{Owner: "o", Repo: "r"})
 	assert.Error(t, err, "missing token should error")

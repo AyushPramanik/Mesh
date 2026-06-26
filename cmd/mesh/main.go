@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -15,6 +17,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/AyushPramanik/mesh/internal/daemon"
+	"github.com/AyushPramanik/mesh/internal/git"
+	"github.com/AyushPramanik/mesh/internal/github"
 	meshv1 "github.com/AyushPramanik/mesh/proto/mesh/v1"
 )
 
@@ -39,8 +43,128 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "repository whose daemon to talk to (default: cwd)")
 	root.PersistentFlags().BoolVar(&flagDev, "dev", false, "verbose logging")
 
-	root.AddCommand(workspaceCmd(), prCmd(), conflictCmd(), gcCmd())
+	root.AddCommand(initCmd(), doctorCmd(), workspaceCmd(), prCmd(), conflictCmd(), landCmd(), gcCmd())
 	return root
+}
+
+func initCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
+		Short: "Prepare the current repository for Mesh",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := daemon.DefaultConfig(flagRepo)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+
+			// Must be a git repository.
+			repo, err := git.Open(cfg.RepoDir)
+			if err != nil {
+				return fmt.Errorf("%s is not a git repository — run `git init` first", cfg.RepoDir)
+			}
+			if err := os.MkdirAll(cfg.StateDir, 0o755); err != nil {
+				return err
+			}
+			ensureGitignore(cfg.RepoDir)
+			fmt.Fprintf(out, "✓ initialized Mesh in %s\n", cfg.RepoDir)
+			fmt.Fprintf(out, "  state: %s\n", cfg.StateDir)
+
+			// Report detected GitHub remote so the user knows owner/repo are
+			// auto-filled and only a token is needed.
+			if url, err := repo.RemoteURL(cmd.Context(), "origin"); err == nil {
+				if owner, name, ok := github.ParseRepoURL(url); ok {
+					fmt.Fprintf(out, "✓ detected GitHub repo: %s/%s\n", owner, name)
+				}
+			}
+
+			fmt.Fprintln(out, "\nNext steps:")
+			fmt.Fprintln(out, "  1. (optional) export GITHUB_TOKEN=…   # a token with 'repo' scope, to submit PRs")
+			fmt.Fprintln(out, "  2. meshd --repo .                     # start the daemon")
+			fmt.Fprintln(out, "  3. mesh doctor                        # verify everything is wired")
+			return nil
+		},
+	}
+}
+
+func doctorCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "doctor",
+		Short: "Diagnose the Mesh setup (daemon, GitHub credentials)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			out := cmd.OutOrStdout()
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			res, err := client.CheckGitHub(cmd.Context(), &meshv1.CheckGitHubRequest{})
+			if err != nil {
+				fmt.Fprintln(out, "✗ daemon: not reachable — start it with `meshd --repo .`")
+				return err
+			}
+			fmt.Fprintln(out, "✓ daemon: reachable")
+			mark := "✗"
+			if res.GetOk() {
+				mark = "✓"
+			}
+			fmt.Fprintf(out, "%s github: %s\n", mark, res.GetStatus())
+			return nil
+		},
+	}
+}
+
+func landCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "land",
+		Short: "Merge the next merge train into the base branch",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, closeConn, err := dial(cmd)
+			if err != nil {
+				return err
+			}
+			defer closeConn()
+
+			stream, err := client.LandTrain(cmd.Context(), &meshv1.LandTrainRequest{})
+			if err != nil {
+				return err
+			}
+			var landed []string
+			for {
+				l, err := stream.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				landed = append(landed, l.GetBranch())
+				fmt.Fprintf(cmd.OutOrStdout(), "landed %s (%s)\n", l.GetBranch(), l.GetCommit())
+			}
+			if len(landed) == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "no PRs to land")
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "landed %d PR(s) into the base branch\n", len(landed))
+			}
+			return nil
+		},
+	}
+}
+
+// ensureGitignore appends .mesh/ to the repo's .gitignore if absent.
+func ensureGitignore(repoDir string) {
+	path := filepath.Join(repoDir, ".gitignore")
+	data, _ := os.ReadFile(path)
+	if strings.Contains(string(data), ".mesh/") {
+		return
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.WriteString("\n# Mesh local state\n.mesh/\n*-worktrees/\n")
 }
 
 func conflictCmd() *cobra.Command {

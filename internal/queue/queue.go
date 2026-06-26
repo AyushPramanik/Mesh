@@ -57,6 +57,7 @@ type prStore interface {
 	MarkPRSubmitted(ctx context.Context, id string) error
 	RequeuePR(ctx context.Context, arg store.RequeuePRParams) error
 	RecordPRFailure(ctx context.Context, arg store.RecordPRFailureParams) error
+	SetPRStatus(ctx context.Context, arg store.SetPRStatusParams) error
 }
 
 // Queue persists and processes PR submissions.
@@ -117,6 +118,14 @@ func (q *Queue) Submit(ctx context.Context, p SubmitParams) (PR, error) {
 		return PR{}, fmt.Errorf("queue.Submit: %w", err)
 	}
 	return fromRow(row), nil
+}
+
+// MarkMerged records that a PR has landed in the base branch.
+func (q *Queue) MarkMerged(ctx context.Context, id string) error {
+	if err := q.store.SetPRStatus(ctx, store.SetPRStatusParams{Status: string(StatusMerged), ID: id}); err != nil {
+		return fmt.Errorf("queue.MarkMerged: %w", err)
+	}
+	return nil
 }
 
 // List returns every PR currently in the given status, in scan order.

@@ -44,6 +44,9 @@ type Daemon struct {
 	// processQueue is true when a PR submitter is configured; only then does
 	// Run drain the queue (otherwise PRs enqueue and wait).
 	processQueue bool
+	// ghStatus describes the GitHub credential state for `mesh doctor`.
+	ghStatus string
+	ghOK     bool
 }
 
 // New opens the git repository and store described by cfg and wires the
@@ -65,11 +68,33 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		return nil, fmt.Errorf("daemon.New: %w", err)
 	}
 
-	// A configured GitHub client processes the queue; otherwise PRs accumulate
-	// until credentials are supplied, rather than failing on submission.
+	// Resolve GitHub: fill owner/repo from the git remote when unset, build the
+	// client, and verify the credentials so failures surface as clear messages
+	// here rather than as stack traces at submission time. On any problem the
+	// daemon still starts, with queue processing disabled and a status message
+	// the `mesh doctor` command can report.
 	var submitter queue.Submitter = disabledSubmitter{}
 	processQueue := false
-	if cfg.GitHub.Configured() {
+	ghStatus := "not configured — set GITHUB_TOKEN to enable PR submission"
+
+	if cfg.GitHub.Owner == "" || cfg.GitHub.Repo == "" {
+		if url, err := repo.RemoteURL(ctx, "origin"); err == nil {
+			if owner, name, ok := github.ParseRepoURL(url); ok {
+				if cfg.GitHub.Owner == "" {
+					cfg.GitHub.Owner = owner
+				}
+				if cfg.GitHub.Repo == "" {
+					cfg.GitHub.Repo = name
+				}
+			}
+		}
+	}
+
+	if cfg.GitHub.Token == "" {
+		// leave ghStatus as the default "not configured" hint
+	} else if cfg.GitHub.Owner == "" || cfg.GitHub.Repo == "" {
+		ghStatus = "GITHUB_TOKEN set but owner/repo unknown — set GITHUB_OWNER and GITHUB_REPO (no GitHub 'origin' remote found)"
+	} else {
 		client, err := github.New(github.Config{
 			Token: cfg.GitHub.Token,
 			Owner: cfg.GitHub.Owner,
@@ -77,11 +102,15 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 			Base:  cfg.GitHub.Base,
 		})
 		if err != nil {
-			st.Close()
-			return nil, fmt.Errorf("daemon.New: %w", err)
+			ghStatus = err.Error()
+		} else if err := client.Verify(ctx); err != nil {
+			ghStatus = err.Error()
+			log.Warn("github credentials rejected; PR processing disabled", "error", err)
+		} else {
+			submitter = client
+			processQueue = true
+			ghStatus = fmt.Sprintf("ok — submitting PRs to %s/%s", cfg.GitHub.Owner, cfg.GitHub.Repo)
 		}
-		submitter = client
-		processQueue = true
 	}
 
 	base := cfg.GitHub.Base
@@ -102,8 +131,45 @@ func New(ctx context.Context, cfg Config) (*Daemon, error) {
 		Scheduler:    queue.NewScheduler(q, files),
 		Analyzer:     conflict.NewAnalyzer(files),
 		processQueue: processQueue,
+		ghStatus:     ghStatus,
+		ghOK:         processQueue,
 	}
 	return d, nil
+}
+
+// GitHubStatus returns a human-readable description of the GitHub credential
+// state and whether PR submission is active.
+func (d *Daemon) GitHubStatus() (status string, ok bool) {
+	return d.ghStatus, d.ghOK
+}
+
+// Landed records a PR that landed in the base branch.
+type Landed struct {
+	Branch string
+	Commit string
+}
+
+// LandNextTrain merges the next planned merge train into the base branch in the
+// main working tree and marks each PR merged. This is local continuous merge:
+// the train's PRs are conflict-free by construction, so the merges land cleanly
+// without going through the PR gate. It returns what it landed.
+func (d *Daemon) LandNextTrain(ctx context.Context) ([]Landed, error) {
+	train, err := d.Scheduler.NextTrain(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("daemon.LandNextTrain: %w", err)
+	}
+	var landed []Landed
+	for _, pr := range train.PRs {
+		commit, err := d.Repo.MergeBranch(ctx, pr.Branch, fmt.Sprintf("mesh: land %s", pr.Branch))
+		if err != nil {
+			return landed, fmt.Errorf("daemon.LandNextTrain: merge %s: %w", pr.Branch, err)
+		}
+		if err := d.Queue.MarkMerged(ctx, pr.ID); err != nil {
+			return landed, fmt.Errorf("daemon.LandNextTrain: %w", err)
+		}
+		landed = append(landed, Landed{Branch: pr.Branch, Commit: commit})
+	}
+	return landed, nil
 }
 
 // gitFileSource adapts the git repo to both queue.FileSource and
@@ -169,7 +235,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 		}()
 		d.log.Info("pr queue processing enabled", "interval", d.cfg.ProcessInterval)
 	} else {
-		d.log.Info("pr queue processing disabled (no GitHub credentials); PRs will be queued only")
+		d.log.Info("pr queue processing disabled; PRs will be queued only", "github", d.ghStatus)
 	}
 
 	// Serve the dashboard's HTTP/SSE API when configured.

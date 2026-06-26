@@ -179,6 +179,31 @@ func (r *Repo) PushWorktree(ctx context.Context, worktreePath, branch, remote st
 	return nil
 }
 
+// RemoteURL returns the configured URL of the named remote (e.g. "origin"), or
+// an error if it is not set.
+func (r *Repo) RemoteURL(ctx context.Context, name string) (string, error) {
+	out, err := r.runGit(ctx, "remote", "get-url", name)
+	if err != nil {
+		return "", fmt.Errorf("git.RemoteURL: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// MergeBranch merges branch into the currently checked-out branch of the main
+// working tree with a merge commit, and returns the new commit's short hash. It
+// is the local landing primitive for merge trains: continuous merge into the
+// base without going through the PR gate.
+func (r *Repo) MergeBranch(ctx context.Context, branch, message string) (string, error) {
+	if _, err := r.runGit(ctx, "merge", "--no-ff", "-m", message, branch); err != nil {
+		return "", fmt.Errorf("git.MergeBranch: %w", err)
+	}
+	out, err := r.runGit(ctx, "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("git.MergeBranch: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // ReadFileAtBranch returns the contents of a repository-relative path as it
 // exists at the tip of branch. A path absent on that branch yields an error.
 func (r *Repo) ReadFileAtBranch(ctx context.Context, branch, path string) ([]byte, error) {

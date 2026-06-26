@@ -241,6 +241,28 @@ func registerTools(s *mcp.Server, c meshv1.MeshServiceClient) {
 	})
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "mesh_land_train",
+		Description: "Merge the next merge train (a conflict-free batch of queued PRs) into the base branch and return what landed.",
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, _ empty) (*mcp.CallToolResult, any, error) {
+		stream, err := c.LandTrain(ctx, &meshv1.LandTrainRequest{})
+		if err != nil {
+			return nil, nil, err
+		}
+		var b strings.Builder
+		for {
+			l, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			fmt.Fprintf(&b, "landed %s (%s)\n", l.GetBranch(), l.GetCommit())
+		}
+		return text(orNone(b.String())), nil, nil
+	})
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "mesh_finish_workspace",
 		Description: "Mark a workspace done (or errored) and reclaim its worktree.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in struct {

@@ -181,6 +181,24 @@ func (s *server) AnalyzeConflicts(req *meshv1.AnalyzeConflictsRequest, stream gr
 	return nil
 }
 
+func (s *server) CheckGitHub(_ context.Context, _ *meshv1.CheckGitHubRequest) (*meshv1.CheckGitHubResponse, error) {
+	status, ok := s.d.GitHubStatus()
+	return &meshv1.CheckGitHubResponse{Ok: ok, Status: status}, nil
+}
+
+func (s *server) LandTrain(_ *meshv1.LandTrainRequest, stream grpc.ServerStreamingServer[meshv1.LandedPR]) error {
+	landed, err := s.d.LandNextTrain(stream.Context())
+	if err != nil {
+		return grpcErr(err)
+	}
+	for _, l := range landed {
+		if err := stream.Send(&meshv1.LandedPR{Branch: l.Branch, Commit: l.Commit}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // grpcErr maps a domain error to a gRPC status. The mapping is coarse for now;
 // typed sentinel errors can refine the codes as the domain grows.
 func grpcErr(err error) error {

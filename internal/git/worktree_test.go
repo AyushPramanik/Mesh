@@ -111,6 +111,25 @@ func TestPushWorktree_ToBareRemote(t *testing.T) {
 	assert.Contains(t, string(out), "feature/push")
 }
 
+func TestMergeBranch_LandsChanges(t *testing.T) {
+	repo := newRepoWithCommit(t)
+	ctx := t.Context()
+
+	// A feature branch in a worktree adds a file.
+	wt, err := repo.CreateWorktree(ctx, "feat", "feature/land")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(wt.Path, "landed.txt"), []byte("x"), 0o644))
+	_, err = repo.CommitWorktree(ctx, wt.Path, "add landed.txt")
+	require.NoError(t, err)
+
+	// Merging the branch into the main tree brings the file into the base.
+	commit, err := repo.MergeBranch(ctx, "feature/land", "mesh: land feature/land")
+	require.NoError(t, err)
+	assert.NotEmpty(t, commit)
+	_, err = os.Stat(filepath.Join(repo.Dir(), "landed.txt"))
+	assert.NoError(t, err, "merged file should be present in the base tree")
+}
+
 func TestRemoveWorktree(t *testing.T) {
 	repo := newRepoWithCommit(t)
 	ctx := t.Context()

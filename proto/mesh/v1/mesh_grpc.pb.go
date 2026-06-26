@@ -36,6 +36,8 @@ const (
 	MeshService_ListPRs_FullMethodName          = "/mesh.v1.MeshService/ListPRs"
 	MeshService_PlanTrains_FullMethodName       = "/mesh.v1.MeshService/PlanTrains"
 	MeshService_AnalyzeConflicts_FullMethodName = "/mesh.v1.MeshService/AnalyzeConflicts"
+	MeshService_CheckGitHub_FullMethodName      = "/mesh.v1.MeshService/CheckGitHub"
+	MeshService_LandTrain_FullMethodName        = "/mesh.v1.MeshService/LandTrain"
 )
 
 // MeshServiceClient is the client API for MeshService service.
@@ -75,6 +77,11 @@ type MeshServiceClient interface {
 	// AnalyzeConflicts streams the symbol-level (AST) conflicts between two
 	// branches' changes — including dependency conflicts that share no files.
 	AnalyzeConflicts(ctx context.Context, in *AnalyzeConflictsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SemanticConflict], error)
+	// CheckGitHub reports the daemon's GitHub credential state.
+	CheckGitHub(ctx context.Context, in *CheckGitHubRequest, opts ...grpc.CallOption) (*CheckGitHubResponse, error)
+	// LandTrain merges the next merge train into the base branch locally and
+	// streams the PRs it landed.
+	LandTrain(ctx context.Context, in *LandTrainRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LandedPR], error)
 }
 
 type meshServiceClient struct {
@@ -270,6 +277,35 @@ func (c *meshServiceClient) AnalyzeConflicts(ctx context.Context, in *AnalyzeCon
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_AnalyzeConflictsClient = grpc.ServerStreamingClient[SemanticConflict]
 
+func (c *meshServiceClient) CheckGitHub(ctx context.Context, in *CheckGitHubRequest, opts ...grpc.CallOption) (*CheckGitHubResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckGitHubResponse)
+	err := c.cc.Invoke(ctx, MeshService_CheckGitHub_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *meshServiceClient) LandTrain(ctx context.Context, in *LandTrainRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LandedPR], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MeshService_ServiceDesc.Streams[5], MeshService_LandTrain_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[LandTrainRequest, LandedPR]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_LandTrainClient = grpc.ServerStreamingClient[LandedPR]
+
 // MeshServiceServer is the server API for MeshService service.
 // All implementations must embed UnimplementedMeshServiceServer
 // for forward compatibility.
@@ -307,6 +343,11 @@ type MeshServiceServer interface {
 	// AnalyzeConflicts streams the symbol-level (AST) conflicts between two
 	// branches' changes — including dependency conflicts that share no files.
 	AnalyzeConflicts(*AnalyzeConflictsRequest, grpc.ServerStreamingServer[SemanticConflict]) error
+	// CheckGitHub reports the daemon's GitHub credential state.
+	CheckGitHub(context.Context, *CheckGitHubRequest) (*CheckGitHubResponse, error)
+	// LandTrain merges the next merge train into the base branch locally and
+	// streams the PRs it landed.
+	LandTrain(*LandTrainRequest, grpc.ServerStreamingServer[LandedPR]) error
 	mustEmbedUnimplementedMeshServiceServer()
 }
 
@@ -358,6 +399,12 @@ func (UnimplementedMeshServiceServer) PlanTrains(*PlanTrainsRequest, grpc.Server
 }
 func (UnimplementedMeshServiceServer) AnalyzeConflicts(*AnalyzeConflictsRequest, grpc.ServerStreamingServer[SemanticConflict]) error {
 	return status.Error(codes.Unimplemented, "method AnalyzeConflicts not implemented")
+}
+func (UnimplementedMeshServiceServer) CheckGitHub(context.Context, *CheckGitHubRequest) (*CheckGitHubResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckGitHub not implemented")
+}
+func (UnimplementedMeshServiceServer) LandTrain(*LandTrainRequest, grpc.ServerStreamingServer[LandedPR]) error {
+	return status.Error(codes.Unimplemented, "method LandTrain not implemented")
 }
 func (UnimplementedMeshServiceServer) mustEmbedUnimplementedMeshServiceServer() {}
 func (UnimplementedMeshServiceServer) testEmbeddedByValue()                     {}
@@ -597,6 +644,35 @@ func _MeshService_AnalyzeConflicts_Handler(srv interface{}, stream grpc.ServerSt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type MeshService_AnalyzeConflictsServer = grpc.ServerStreamingServer[SemanticConflict]
 
+func _MeshService_CheckGitHub_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckGitHubRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MeshServiceServer).CheckGitHub(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MeshService_CheckGitHub_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MeshServiceServer).CheckGitHub(ctx, req.(*CheckGitHubRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MeshService_LandTrain_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(LandTrainRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MeshServiceServer).LandTrain(m, &grpc.GenericServerStream[LandTrainRequest, LandedPR]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MeshService_LandTrainServer = grpc.ServerStreamingServer[LandedPR]
+
 // MeshService_ServiceDesc is the grpc.ServiceDesc for MeshService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -640,6 +716,10 @@ var MeshService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "SubmitPR",
 			Handler:    _MeshService_SubmitPR_Handler,
 		},
+		{
+			MethodName: "CheckGitHub",
+			Handler:    _MeshService_CheckGitHub_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -665,6 +745,11 @@ var MeshService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "AnalyzeConflicts",
 			Handler:       _MeshService_AnalyzeConflicts_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "LandTrain",
+			Handler:       _MeshService_LandTrain_Handler,
 			ServerStreams: true,
 		},
 	},
