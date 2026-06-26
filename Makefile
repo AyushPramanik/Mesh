@@ -18,6 +18,7 @@ lint:
 build:
 	go build -o bin/mesh ./cmd/mesh
 	go build -o bin/meshd ./cmd/meshd
+	go build -o bin/mesh-mcp ./cmd/mesh-mcp
 
 # Generate protobuf + gRPC bindings from proto/mesh/v1.
 .PHONY: proto
