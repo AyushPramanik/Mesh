@@ -24,6 +24,9 @@ type Config struct {
 	GitHub GitHubConfig
 	// ProcessInterval is how often the daemon drains the PR queue.
 	ProcessInterval time.Duration
+	// HTTPAddr is the address the dashboard HTTP/SSE API listens on. Empty
+	// disables it.
+	HTTPAddr string
 }
 
 // GitHubConfig is the credentials and target repository for PR submission. It
@@ -69,6 +72,7 @@ func DefaultConfig(repoDir string) (Config, error) {
 			Base:  os.Getenv("GITHUB_BASE"),
 		},
 		ProcessInterval: 10 * time.Second,
+		HTTPAddr:        "127.0.0.1:7777",
 	}, nil
 }
 

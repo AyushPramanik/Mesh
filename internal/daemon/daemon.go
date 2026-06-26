@@ -14,7 +14,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -162,6 +164,18 @@ func (d *Daemon) Run(ctx context.Context) error {
 		d.log.Info("pr queue processing disabled (no GitHub credentials); PRs will be queued only")
 	}
 
+	// Serve the dashboard's HTTP/SSE API when configured.
+	var httpSrv *http.Server
+	if d.cfg.HTTPAddr != "" {
+		httpSrv = &http.Server{Addr: d.cfg.HTTPAddr, Handler: d.httpHandler()}
+		go func() {
+			if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				d.log.Error("dashboard http server stopped", "error", err)
+			}
+		}()
+		d.log.Info("dashboard api listening", "addr", d.cfg.HTTPAddr)
+	}
+
 	d.log.Info("mesh daemon ready",
 		"repo", d.cfg.RepoDir,
 		"socket", d.cfg.SocketPath,
@@ -171,6 +185,11 @@ func (d *Daemon) Run(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		d.log.Info("mesh daemon shutting down")
+		if httpSrv != nil {
+			shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_ = httpSrv.Shutdown(shutCtx)
+			cancel()
+		}
 		gs.GracefulStop()
 		return nil
 	case err := <-serveErr:
