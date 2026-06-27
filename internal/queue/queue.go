@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	mrand "math/rand/v2"
 	"time"
 
 	"github.com/AyushPramanik/mesh/internal/store"
@@ -212,11 +213,27 @@ func (q *Queue) Run(ctx context.Context, interval time.Duration) error {
 	}
 }
 
-// backoffModifier returns a SQLite datetime modifier (e.g. "+120 seconds") for
-// the given attempt number, doubling the base delay each attempt.
+// backoff returns the base retry delay for the given attempt number, doubling
+// each attempt (base * 2^(attempt-1)). It is deterministic; jitter is layered
+// on separately in backoffModifier.
+func (q *Queue) backoff(attempt int) time.Duration {
+	return q.baseBackoff << (attempt - 1)
+}
+
+// backoffModifier returns a SQLite datetime modifier (e.g. "+137 seconds") for
+// the given attempt: the doubling base delay plus up to 50% random jitter. The
+// jitter matters at agent scale — without it, N PRs that fail together on a
+// shared cause (a GitHub rate limit, a flaky CI window) would all retry in
+// lockstep, re-creating the same thundering herd on every cycle. Spreading the
+// retries de-synchronises them.
 func (q *Queue) backoffModifier(attempt int) string {
-	delay := q.baseBackoff << (attempt - 1) // base * 2^(attempt-1)
-	return fmt.Sprintf("+%d seconds", int(delay.Seconds()))
+	base := q.backoff(attempt)
+	secs := int64(base.Seconds())
+	var jitter int64
+	if secs > 0 {
+		jitter = mrand.Int64N(secs/2 + 1)
+	}
+	return fmt.Sprintf("+%d seconds", secs+jitter)
 }
 
 // fromRow maps a store row to the domain type.

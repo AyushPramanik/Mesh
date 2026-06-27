@@ -24,7 +24,7 @@ func schedSetup(t *testing.T, files mapFiles) (*Scheduler, *Queue) {
 	ctx := context.Background()
 	st, err := store.Open(ctx, ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { _ = st.Close() })
 	_, err = st.RegisterAgent(ctx, store.RegisterAgentParams{ID: "a", Name: "n"})
 	require.NoError(t, err)
 	_, err = st.CreateWorkspace(ctx, store.CreateWorkspaceParams{ID: "ws", AgentID: "a", Branch: "b", Path: "/p"})

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AyushPramanik/mesh/internal/queue"
+	"github.com/AyushPramanik/mesh/internal/version"
 	"github.com/AyushPramanik/mesh/internal/workspace"
 )
 
@@ -47,6 +48,8 @@ func toPRView(p queue.PR) prView {
 // Server-Sent Events stream.
 func (d *Daemon) httpHandler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", d.handleHealthz)
+	mux.HandleFunc("GET /readyz", d.handleReadyz)
 	mux.HandleFunc("GET /api/snapshot", d.handleSnapshot)
 	mux.HandleFunc("GET /api/stream", d.handleStream)
 	return withCORS(mux)
@@ -85,6 +88,39 @@ func (d *Daemon) collect(ctx context.Context) (snapshot, error) {
 		snap.Trains[i] = batch
 	}
 	return snap, nil
+}
+
+// handleHealthz is the liveness probe: it returns 200 as long as the daemon's
+// HTTP server is serving. It does no dependency checks, so an orchestrator uses
+// it to decide whether the process is alive (vs. needing a restart), not
+// whether it can do useful work.
+func (d *Daemon) handleHealthz(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "version": version.Version})
+}
+
+// handleReadyz is the readiness probe: it returns 200 only when the daemon can
+// actually serve — the database answers a ping — and reports whether PR
+// processing is enabled. An orchestrator uses it to decide whether to route
+// traffic. A failed DB ping yields 503 so the daemon is pulled from rotation.
+func (d *Daemon) handleReadyz(w http.ResponseWriter, r *http.Request) {
+	body := map[string]any{
+		"queueProcessing": d.processQueue,
+		"github":          d.ghStatus,
+	}
+	if err := d.Store.Ping(r.Context()); err != nil {
+		body["status"] = "not ready"
+		body["error"] = err.Error()
+		writeJSON(w, http.StatusServiceUnavailable, body)
+		return
+	}
+	body["status"] = "ready"
+	writeJSON(w, http.StatusOK, body)
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
 }
 
 func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {

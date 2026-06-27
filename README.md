@@ -83,7 +83,7 @@ agents / MCP / CLI ──gRPC──► meshd (Go daemon, Unix socket)
 ```sh
 make build      # builds bin/mesh, bin/meshd, bin/mesh-mcp
 make test       # all tests
-make lint       # go vet (+ golangci-lint if installed)
+make lint       # golangci-lint (falls back to go vet if not installed)
 ```
 
 See [CLAUDE.md](CLAUDE.md) for the full design, conventions, and build order.

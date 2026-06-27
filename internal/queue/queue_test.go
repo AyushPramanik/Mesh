@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func setup(t *testing.T) *store.Store {
 	ctx := context.Background()
 	st, err := store.Open(ctx, ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { _ = st.Close() })
 
 	_, err = st.RegisterAgent(ctx, store.RegisterAgentParams{ID: "a", Name: "claude"})
 	require.NoError(t, err)
@@ -158,9 +159,34 @@ func TestProcessOnce_OrdersByPriorityThenAge(t *testing.T) {
 	assert.Equal(t, []string{"high", "mid", "low"}, order)
 }
 
-func TestBackoffModifier_Doubles(t *testing.T) {
+func TestBackoff_Doubles(t *testing.T) {
 	q := New(nil, nil, WithBaseBackoff(30*time.Second))
-	assert.Equal(t, "+30 seconds", q.backoffModifier(1))
-	assert.Equal(t, "+60 seconds", q.backoffModifier(2))
-	assert.Equal(t, "+120 seconds", q.backoffModifier(3))
+	assert.Equal(t, 30*time.Second, q.backoff(1))
+	assert.Equal(t, 60*time.Second, q.backoff(2))
+	assert.Equal(t, 120*time.Second, q.backoff(3))
+}
+
+// backoffModifier adds up to 50% jitter, so each attempt's delay lands in
+// [base, base*1.5]. Sample repeatedly to exercise the randomness and assert the
+// bounds hold every time.
+func TestBackoffModifier_JitterWithinBounds(t *testing.T) {
+	q := New(nil, nil, WithBaseBackoff(30*time.Second))
+	for attempt := 1; attempt <= 3; attempt++ {
+		base := int(q.backoff(attempt).Seconds())
+		for i := 0; i < 50; i++ {
+			var secs int
+			_, err := fmt.Sscanf(q.backoffModifier(attempt), "+%d seconds", &secs)
+			require.NoError(t, err)
+			assert.GreaterOrEqual(t, secs, base)
+			assert.LessOrEqual(t, secs, base+base/2)
+		}
+	}
+}
+
+// A zero base (used in tests to make retries immediately due) must stay zero —
+// jitter of nothing is nothing.
+func TestBackoffModifier_ZeroBaseStaysImmediate(t *testing.T) {
+	q := New(nil, nil, WithBaseBackoff(0))
+	assert.Equal(t, "+0 seconds", q.backoffModifier(1))
+	assert.Equal(t, "+0 seconds", q.backoffModifier(3))
 }

@@ -18,7 +18,7 @@ func setup(t *testing.T, workspaceIDs ...string) (*Predictor, *store.Store) {
 
 	st, err := store.Open(ctx, ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { _ = st.Close() })
 
 	_, err = st.RegisterAgent(ctx, store.RegisterAgentParams{ID: "agent", Name: "claude"})
 	require.NoError(t, err)

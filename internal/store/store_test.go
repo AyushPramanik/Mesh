@@ -13,7 +13,7 @@ func newStore(t *testing.T) *Store {
 	t.Helper()
 	s, err := Open(context.Background(), ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
 

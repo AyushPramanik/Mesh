@@ -41,7 +41,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("connecting to meshd: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	client := meshv1.NewMeshServiceClient(conn)
 
 	server := mcp.NewServer(&mcp.Implementation{

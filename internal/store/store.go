@@ -14,6 +14,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -32,10 +33,21 @@ type Store struct {
 // schema. dsn is a file path; pass ":memory:" for an ephemeral database in
 // tests. Foreign keys are enforced for every connection in the pool.
 func Open(ctx context.Context, dsn string) (*Store, error) {
-	// _pragma applies per-connection; foreign_keys must be set on every
-	// connection in the pool, not just the first, hence the DSN parameter
-	// rather than a one-off PRAGMA statement.
-	db, err := sql.Open("sqlite", dsn+"?_pragma=foreign_keys(1)")
+	// _pragma applies per-connection; these must be set on every connection in
+	// the pool, not just the first, hence DSN parameters rather than one-off
+	// PRAGMA statements. foreign_keys enforces referential integrity;
+	// busy_timeout makes a connection wait out a lock instead of failing
+	// immediately with SQLITE_BUSY — essential because the daemon writes from
+	// the queue goroutine while serving reads to gRPC and the dashboard. WAL
+	// lets readers and a writer proceed concurrently and survives crashes
+	// better than the default rollback journal; synchronous(NORMAL) is the
+	// safe, fast pairing with WAL. WAL is a file-only mode, so it is omitted
+	// for the in-memory database used in tests.
+	pragmas := []string{"foreign_keys(1)", "busy_timeout(5000)"}
+	if dsn != ":memory:" {
+		pragmas = append(pragmas, "journal_mode(WAL)", "synchronous(NORMAL)")
+	}
+	db, err := sql.Open("sqlite", dsn+"?_pragma="+strings.Join(pragmas, "&_pragma="))
 	if err != nil {
 		return nil, fmt.Errorf("store.Open: %w", err)
 	}
@@ -45,11 +57,11 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 		db.SetMaxOpenConns(1)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("store.Open: ping: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, schema); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("store.Open: apply schema: %w", err)
 	}
 	return &Store{Queries: New(db), db: db}, nil
@@ -73,7 +85,7 @@ func (s *Store) Tx(ctx context.Context, fn func(*Queries) error) (err error) {
 		}
 	}()
 
-	if err = fn(s.Queries.WithTx(tx)); err != nil {
+	if err = fn(s.WithTx(tx)); err != nil {
 		return err
 	}
 	if err = tx.Commit(); err != nil {
@@ -81,6 +93,10 @@ func (s *Store) Tx(ctx context.Context, fn func(*Queries) error) (err error) {
 	}
 	return nil
 }
+
+// Ping verifies the database connection is alive. It backs the daemon's
+// readiness probe.
+func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 
 // Close releases the database handle.
 func (s *Store) Close() error { return s.db.Close() }

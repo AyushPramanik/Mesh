@@ -165,7 +165,7 @@ func ensureGitignore(repoDir string) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, _ = f.WriteString("\n# Mesh local state\n.mesh/\n*-worktrees/\n")
 }
 
@@ -219,7 +219,7 @@ func dial(cmd *cobra.Command) (meshv1.MeshServiceClient, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("connecting to meshd: %w (is the daemon running?)", err)
 	}
-	return meshv1.NewMeshServiceClient(conn), func() { conn.Close() }, nil
+	return meshv1.NewMeshServiceClient(conn), func() { _ = conn.Close() }, nil
 }
 
 func workspaceCmd() *cobra.Command {

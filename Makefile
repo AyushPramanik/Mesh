@@ -5,13 +5,14 @@
 test:
 	go test ./...
 
-# Static analysis. golangci-lint is added once it is wired into CI; until then
-# `go vet` is the baseline that must always pass.
+# Static analysis. golangci-lint (config in .golangci.yml) is the standard gate
+# and runs in CI; it includes go vet. Locally it falls back to `go vet` if the
+# tool is not installed — install it with:
+#   go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 .PHONY: lint
 lint:
-	go vet ./...
-	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run || \
-		echo "golangci-lint not installed; ran go vet only"
+	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || \
+		{ echo "golangci-lint not installed; running go vet only"; go vet ./...; }
 
 # Build the CLI and daemon into ./bin for the host platform.
 .PHONY: build

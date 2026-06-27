@@ -1,0 +1,25 @@
+# golangci-lint v2 configuration. Conservative on purpose: the standard linter
+# set (errcheck, govet, ineffassign, staticcheck, unused) catches real bugs with
+# almost no false positives, plus misspell for docs hygiene. Generated code
+# (protoc, sqlc) is excluded automatically. Expand the enabled set as the
+# codebase hardens toward v1.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - misspell
+  settings:
+    errcheck:
+      # Writes to an already-obtained io.Writer (CLI stdout/stderr) — checking
+      # these errors adds noise without catching real bugs.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+  exclusions:
+    generated: lax
+
+formatters:
+  enable:
+    - gofmt

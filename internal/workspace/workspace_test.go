@@ -28,7 +28,7 @@ func setup(t *testing.T) (*Manager, *git.Repo, string) {
 
 	st, err := store.Open(ctx, ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { st.Close() })
+	t.Cleanup(func() { _ = st.Close() })
 
 	_, err = st.RegisterAgent(ctx, store.RegisterAgentParams{ID: "agent-1", Name: "claude"})
 	require.NoError(t, err)

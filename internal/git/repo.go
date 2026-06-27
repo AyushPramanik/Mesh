@@ -105,7 +105,7 @@ func (r *Repo) Commit(message string, files map[string][]byte) (plumbing.Hash, e
 			return plumbing.ZeroHash, fmt.Errorf("git.Commit: create %q: %w", path, err)
 		}
 		if _, err := f.Write(content); err != nil {
-			f.Close()
+			_ = f.Close()
 			return plumbing.ZeroHash, fmt.Errorf("git.Commit: write %q: %w", path, err)
 		}
 		if err := f.Close(); err != nil {

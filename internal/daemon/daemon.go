@@ -217,11 +217,24 @@ func (d *Daemon) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("daemon.Run: listen: %w", err)
 	}
-	defer lis.Close()
-	defer os.Remove(d.cfg.SocketPath)
+	defer func() { _ = lis.Close() }()
+	defer func() { _ = os.Remove(d.cfg.SocketPath) }()
 
-	// Serve the typed agent protocol over the socket.
-	gs := grpc.NewServer()
+	// Restrict the socket to its owner. The gRPC protocol has no auth, so file
+	// permissions are the access boundary: without this, the socket's mode
+	// depends on the process umask and may be group/world-accessible, letting
+	// any local user drive Mesh.
+	if err := os.Chmod(d.cfg.SocketPath, 0o600); err != nil {
+		return fmt.Errorf("daemon.Run: secure socket: %w", err)
+	}
+
+	// Serve the typed agent protocol over the socket. The interceptors log any
+	// handler error with its method, so failures are diagnosable from the
+	// daemon log even though the gRPC status returned to the caller is coarse.
+	gs := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(d.logUnaryErr),
+		grpc.ChainStreamInterceptor(d.logStreamErr),
+	)
 	d.Register(gs)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- gs.Serve(lis) }()
@@ -280,6 +293,25 @@ func (d *Daemon) Close() error {
 		return d.Store.Close()
 	}
 	return nil
+}
+
+// logUnaryErr is a gRPC unary interceptor that logs the method and error of any
+// failed handler. Successful calls are not logged to keep the daemon quiet.
+func (d *Daemon) logUnaryErr(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	resp, err := handler(ctx, req)
+	if err != nil {
+		d.log.Error("rpc failed", "method", info.FullMethod, "error", err)
+	}
+	return resp, err
+}
+
+// logStreamErr is the streaming counterpart to logUnaryErr.
+func (d *Daemon) logStreamErr(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	err := handler(srv, ss)
+	if err != nil {
+		d.log.Error("rpc stream failed", "method", info.FullMethod, "error", err)
+	}
+	return err
 }
 
 // newLogger returns a structured logger; --dev raises verbosity to debug.
