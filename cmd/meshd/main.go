@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/AyushPramanik/mesh/internal/daemon"
+	"github.com/AyushPramanik/mesh/internal/version"
 )
 
 func main() {
@@ -24,10 +25,16 @@ func main() {
 
 func run() error {
 	var (
-		dev  = flag.Bool("dev", false, "verbose logging for development")
-		repo = flag.String("repo", "", "git repository to orchestrate (default: cwd)")
+		dev     = flag.Bool("dev", false, "verbose logging for development")
+		repo    = flag.String("repo", "", "git repository to orchestrate (default: cwd)")
+		showVer = flag.Bool("version", false, "print version and exit")
 	)
 	flag.Parse()
+
+	if *showVer {
+		fmt.Println("meshd", version.Version)
+		return nil
+	}
 
 	cfg, err := daemon.DefaultConfig(*repo)
 	if err != nil {

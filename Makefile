@@ -20,6 +20,12 @@ build:
 	go build -o bin/meshd ./cmd/meshd
 	go build -o bin/mesh-mcp ./cmd/mesh-mcp
 
+# Cross-compile release artifacts into ./dist (archives + SHA256SUMS).
+# Pass VERSION to stamp the binaries: make release VERSION=v0.1.0
+.PHONY: release
+release:
+	./scripts/release.sh $(VERSION)
+
 # Generate protobuf + gRPC bindings from proto/mesh/v1.
 .PHONY: proto
 proto:

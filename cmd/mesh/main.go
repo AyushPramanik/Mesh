@@ -19,6 +19,7 @@ import (
 	"github.com/AyushPramanik/mesh/internal/daemon"
 	"github.com/AyushPramanik/mesh/internal/git"
 	"github.com/AyushPramanik/mesh/internal/github"
+	"github.com/AyushPramanik/mesh/internal/version"
 	meshv1 "github.com/AyushPramanik/mesh/proto/mesh/v1"
 )
 
@@ -38,6 +39,7 @@ func rootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:          "mesh",
 		Short:        "Agent-native version control",
+		Version:      version.Version,
 		SilenceUsage: true,
 	}
 	root.PersistentFlags().StringVar(&flagRepo, "repo", "", "repository whose daemon to talk to (default: cwd)")

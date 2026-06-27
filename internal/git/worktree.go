@@ -157,7 +157,8 @@ func (r *Repo) CommitWorktree(ctx context.Context, worktreePath, message string)
 	if _, err := r.runGitIn(ctx, worktreePath, "add", "-A"); err != nil {
 		return "", fmt.Errorf("git.CommitWorktree: %w", err)
 	}
-	if _, err := r.runGitIn(ctx, worktreePath, "commit", "-m", message); err != nil {
+	commit := append(r.identityArgs(ctx, worktreePath), "commit", "-m", message)
+	if _, err := r.runGitIn(ctx, worktreePath, commit...); err != nil {
 		return "", fmt.Errorf("git.CommitWorktree: %w", err)
 	}
 	out, err := r.runGitIn(ctx, worktreePath, "rev-parse", "--short", "HEAD")
@@ -194,7 +195,8 @@ func (r *Repo) RemoteURL(ctx context.Context, name string) (string, error) {
 // is the local landing primitive for merge trains: continuous merge into the
 // base without going through the PR gate.
 func (r *Repo) MergeBranch(ctx context.Context, branch, message string) (string, error) {
-	if _, err := r.runGit(ctx, "merge", "--no-ff", "-m", message, branch); err != nil {
+	merge := append(r.identityArgs(ctx, r.dir), "merge", "--no-ff", "-m", message, branch)
+	if _, err := r.runGit(ctx, merge...); err != nil {
 		return "", fmt.Errorf("git.MergeBranch: %w", err)
 	}
 	out, err := r.runGit(ctx, "rev-parse", "--short", "HEAD")
@@ -217,6 +219,30 @@ func (r *Repo) ReadFileAtBranch(ctx context.Context, branch, path string) ([]byt
 // runGit runs a git subcommand in the repository's main working tree.
 func (r *Repo) runGit(ctx context.Context, args ...string) ([]byte, error) {
 	return r.runGitIn(ctx, r.dir, args...)
+}
+
+// identityArgs returns the `-c user.name=… -c user.email=…` flags needed to
+// record a commit when the host git has no configured identity — the common
+// case in fresh containers and CI, where agents driving Mesh often run. When an
+// identity is already configured (repo or global), it returns nil so the user's
+// real attribution is preserved. The fallback honours git's own
+// GIT_{AUTHOR,COMMITTER}_{NAME,EMAIL} env vars before defaulting to Mesh.
+func (r *Repo) identityArgs(ctx context.Context, dir string) []string {
+	if out, err := r.runGitIn(ctx, dir, "config", "user.email"); err == nil && strings.TrimSpace(string(out)) != "" {
+		return nil
+	}
+	name := firstNonEmpty(os.Getenv("GIT_AUTHOR_NAME"), os.Getenv("GIT_COMMITTER_NAME"), "Mesh")
+	email := firstNonEmpty(os.Getenv("GIT_AUTHOR_EMAIL"), os.Getenv("GIT_COMMITTER_EMAIL"), "mesh@localhost")
+	return []string{"-c", "user.name=" + name, "-c", "user.email=" + email}
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // runGitIn runs a git subcommand in dir and returns its stdout. Stderr is

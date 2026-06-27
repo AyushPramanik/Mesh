@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/AyushPramanik/mesh/internal/daemon"
+	"github.com/AyushPramanik/mesh/internal/version"
 	meshv1 "github.com/AyushPramanik/mesh/proto/mesh/v1"
 )
 
@@ -46,7 +47,7 @@ func run() error {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "mesh",
 		Title:   "Mesh — agent-native version control",
-		Version: "0.1.0",
+		Version: version.Version,
 	}, nil)
 	registerTools(server, client)
 
