@@ -91,3 +91,11 @@ detection, the PR queue with backoff, merge-train planning, and local landing â€
 works end-to-end today (`bash scripts/quickstart-demo.sh`). GitHub PR submission
 is wired; native merge-queue integration and multi-language AST (Tree-sitter)
 are next.
+
+## Contributing
+
+Issues and PRs welcome â€” see [CONTRIBUTING.md](CONTRIBUTING.md). Requires Go 1.25+.
+
+## License
+
+[GNU AGPL-3.0](LICENSE). The hosted SaaS tier is built on the same open core.

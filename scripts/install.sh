@@ -5,7 +5,7 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/AyushPramanik/Mesh/main/scripts/install.sh | sh
 #
-# Requires git and Go 1.22+. Override the install dir with MESH_BIN=/usr/local/bin.
+# Requires git and Go 1.25+. Override the install dir with MESH_BIN=/usr/local/bin.
 # (Prebuilt binaries and a Homebrew tap are planned once releases are cut.)
 set -euo pipefail
 
@@ -20,7 +20,8 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 echo "→ cloning Mesh"
-git clone --depth 1 "$REPO" "$workdir/mesh" >/dev/null 2>&1
+git clone --depth 1 "$REPO" "$workdir/mesh" --quiet \
+  || { echo "mesh install: clone failed (is $REPO reachable?)" >&2; exit 1; }
 
 echo "→ building binaries"
 ( cd "$workdir/mesh" && go build -o bin/mesh ./cmd/mesh && go build -o bin/meshd ./cmd/meshd && go build -o bin/mesh-mcp ./cmd/mesh-mcp )

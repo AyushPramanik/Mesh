@@ -10,7 +10,7 @@ the local walkthrough.
 curl -fsSL https://raw.githubusercontent.com/AyushPramanik/Mesh/main/scripts/install.sh | sh
 ```
 
-Requires `git` and Go 1.22+. This builds `mesh`, `meshd`, and `mesh-mcp` and
+Requires `git` and Go 1.25+. This builds `mesh`, `meshd`, and `mesh-mcp` and
 installs them to `~/.local/bin` (override with `MESH_BIN`). Make sure that
 directory is on your `PATH`.
 

@@ -88,7 +88,7 @@ mesh/
 
 | Layer | Technology | Why |
 |---|---|---|
-| Daemon + CLI | Go 1.22+ | Single static binary, fast startup, goroutine concurrency, large OSS contributor pool |
+| Daemon + CLI | Go 1.25+ | Single static binary, fast startup, goroutine concurrency, large OSS contributor pool |
 | Git operations | go-git | Pure Go, no CGO, no system git version dependency |
 | Agent protocol | gRPC + protobuf | Typed, versioned, streaming, generated clients for Python/TS/Go |
 | AST conflict detection | Tree-sitter (Go bindings) | 50+ languages, incremental, fast, used by VS Code/Neovim |
@@ -252,20 +252,27 @@ make build
 
 ## Current status
 
-This is a pre-v0.1 greenfield project. The immediate build order is:
+Pre-v0.1. The full core loop is built and the layers below were shipped in order, each
+with integration tests validating the contract the next depends on:
 
-1. `internal/git` — worktree create/delete/list wrapping go-git
-2. `internal/store` — SQLite schema + sqlc for workspace and queue tables
-3. `internal/workspace` — workspace manager using (1) and (2)
-4. `cmd/mesh` + `cmd/meshd` — skeleton CLI and daemon, no gRPC yet
-5. `internal/conflict` — file-level overlap detection first, AST later
-6. `internal/queue` — FIFO PR queue with GitHub REST submission
-7. `proto/` + gRPC wiring — replace in-process calls with the typed protocol
-8. Merge train scheduler
-9. `dashboard/` — React UI
+1. ✅ `internal/git` — worktree create/delete/list wrapping go-git
+2. ✅ `internal/store` — SQLite schema + sqlc for workspace and queue tables
+3. ✅ `internal/workspace` — workspace manager using (1) and (2)
+4. ✅ `cmd/mesh` + `cmd/meshd` — CLI and daemon
+5. ✅ `internal/conflict` — file-level overlap **and** Go `go/ast` symbol-graph detection
+6. ✅ `internal/queue` — PR queue with GitHub REST submission and backoff
+7. ✅ `proto/` + gRPC wiring — typed agent protocol; CLI and MCP server are clients
+8. ✅ Merge train scheduler over file footprints, plus local train landing
+9. ✅ `dashboard/` — React + SSE UI
 
-Do not jump ahead. Each layer has integration tests that validate the contract the next
-layer depends on. Ship layers in order.
+Known gaps / next up:
+
+- **Multi-language AST** — conflict detection is Go-only today (`go/ast`). The Tree-sitter
+  generalisation to 50+ languages (see the tech-stack table) is not built yet; it reuses the
+  `SymbolGraph` shape in `internal/conflict/graph.go`.
+- **Native merge-queue integration** — trains land locally; GitHub merge-queue submission is
+  wired for PRs but not yet driving the train end-to-end.
+- **Hosted tier** — Postgres backend and multi-repo/multi-user SaaS are design-only.
 
 ---
 
