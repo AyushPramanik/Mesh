@@ -152,9 +152,154 @@ func TestBuildSymbolGraph_UnsupportedExtensionSkipped(t *testing.T) {
 	assert.Empty(t, g.Defines)
 }
 
+func TestBuildSymbolGraph_Cpp(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"server.cpp": []byte(`namespace net {
+
+class Server {
+public:
+    void listen(int port);
+};
+
+} // namespace net
+
+int run(Config cfg) {
+    return start(cfg); // start referenced
+}
+`),
+	})
+	assert.Contains(t, g.Defines, "Server")
+	assert.Contains(t, g.Defines, "net")
+	assert.Contains(t, g.Defines, "run")
+	assert.Contains(t, g.Refs, "start")
+}
+
+func TestBuildSymbolGraph_CSharp(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"Account.cs": []byte(`namespace Bank {
+    public class Account {
+        public void Withdraw(int amount) {
+            Validate(amount); // Validate referenced
+        }
+    }
+}
+`),
+	})
+	assert.Contains(t, g.Defines, "Account")
+	assert.Contains(t, g.Defines, "Withdraw")
+	assert.Contains(t, g.Refs, "Validate")
+}
+
+func TestBuildSymbolGraph_PHP(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"user.php": []byte(`<?php
+class User {
+    public function save() {
+        return persist($this); // persist referenced
+    }
+}
+function helper() {}
+`),
+	})
+	assert.Contains(t, g.Defines, "User")
+	assert.Contains(t, g.Defines, "save")
+	assert.Contains(t, g.Defines, "helper")
+	assert.Contains(t, g.Refs, "persist")
+}
+
+func TestBuildSymbolGraph_Swift(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"Model.swift": []byte(`struct Point {
+    let x: Int
+}
+
+func distance(p: Point) -> Int {
+    return compute(p) // compute referenced
+}
+`),
+	})
+	assert.Contains(t, g.Defines, "Point")
+	assert.Contains(t, g.Defines, "distance")
+	assert.Contains(t, g.Defines, "x")
+	assert.Contains(t, g.Refs, "compute")
+}
+
+func TestBuildSymbolGraph_Kotlin(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"Repo.kt": []byte(`class Repo {
+    fun find(id: String): User {
+        return load(id) // load referenced
+    }
+}
+
+val MAX = 100
+`),
+	})
+	assert.Contains(t, g.Defines, "Repo")
+	assert.Contains(t, g.Defines, "find")
+	assert.Contains(t, g.Defines, "MAX")
+	assert.Contains(t, g.Refs, "load")
+}
+
+func TestBuildSymbolGraph_Scala(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"Svc.scala": []byte(`object Svc {
+  def start(): Boolean = bind() // bind referenced
+}
+
+class Config
+`),
+	})
+	assert.Contains(t, g.Defines, "Svc")
+	assert.Contains(t, g.Defines, "start")
+	assert.Contains(t, g.Defines, "Config")
+	assert.Contains(t, g.Refs, "bind")
+}
+
+func TestBuildSymbolGraph_Shell(t *testing.T) {
+	g := BuildSymbolGraph(map[string][]byte{
+		"deploy.sh": []byte(`#!/usr/bin/env bash
+function build() {
+    compile_all # compile_all referenced
+}
+
+deploy() {
+    build
+}
+`),
+	})
+	assert.Contains(t, g.Defines, "build")
+	assert.Contains(t, g.Defines, "deploy")
+	assert.Contains(t, g.Refs, "compile_all")
+}
+
+func TestBuildSymbolGraph_ControlFlowNotMistakenForDefine(t *testing.T) {
+	// `while (...) {` and `if (...) {` superficially resemble a C function
+	// definition; the keyword guard must keep them out of Defines so two
+	// unrelated branches with control flow don't collide on "while"/"if".
+	g := BuildSymbolGraph(map[string][]byte{
+		"loop.c": []byte(`int main() {
+    while (running) {
+        tick();
+    }
+    if (done) {
+        stop();
+    }
+    return 0;
+}
+`),
+	})
+	assert.Contains(t, g.Defines, "main")
+	assert.NotContains(t, g.Defines, "while")
+	assert.NotContains(t, g.Defines, "if")
+}
+
 func TestSupportedExtensions_CoversRegisteredLanguages(t *testing.T) {
 	exts := SupportedExtensions()
-	for _, want := range []string{".go", ".py", ".js", ".ts", ".tsx", ".java", ".rs", ".rb"} {
+	for _, want := range []string{
+		".go", ".py", ".js", ".ts", ".tsx", ".java", ".rs", ".rb",
+		".c", ".h", ".cpp", ".hpp", ".cs", ".php", ".swift", ".kt", ".scala", ".sh",
+	} {
 		assert.Contains(t, exts, want, "expected %s to be supported", want)
 	}
 }

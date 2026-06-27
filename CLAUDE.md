@@ -260,7 +260,8 @@ with integration tests validating the contract the next depends on:
 3. ✅ `internal/workspace` — workspace manager using (1) and (2)
 4. ✅ `cmd/mesh` + `cmd/meshd` — CLI and daemon
 5. ✅ `internal/conflict` — file-level overlap **and** multi-language symbol-graph
-   detection (Go via `go/ast`; Python/JS/TS/Java/Rust/Ruby via pure-Go heuristic parsers)
+   detection (Go via `go/ast`; Python/JS/TS/Java/Rust/Ruby/C/C++/C#/PHP/Swift/Kotlin/Scala/Shell
+   via pure-Go heuristic parsers)
 6. ✅ `internal/queue` — PR queue with GitHub REST submission and backoff
 7. ✅ `proto/` + gRPC wiring — typed agent protocol; CLI and MCP server are clients
 8. ✅ Merge train scheduler over file footprints, plus local train landing

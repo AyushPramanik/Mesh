@@ -33,9 +33,17 @@ func (h heuristicParser) parse(graph *SymbolGraph, src []byte) {
 
 	for _, re := range h.defPatterns {
 		for _, m := range re.FindAllSubmatch(clean, -1) {
-			if len(m) > 1 && len(m[1]) > 0 {
-				graph.Defines[string(m[1])] = struct{}{}
+			if len(m) <= 1 || len(m[1]) == 0 {
+				continue
 			}
+			name := string(m[1])
+			// A reserved word captured as a name is always a pattern artefact
+			// (e.g. `while (...) {` matching a function-definition pattern), never
+			// a real symbol — drop it so it can't manufacture a phantom conflict.
+			if _, isKeyword := h.keywords[name]; isKeyword {
+				continue
+			}
+			graph.Defines[name] = struct{}{}
 		}
 	}
 
