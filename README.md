@@ -1,5 +1,9 @@
 # Mesh
 
+[![CI](https://github.com/AyushPramanik/Mesh/actions/workflows/ci.yml/badge.svg)](https://github.com/AyushPramanik/Mesh/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/AyushPramanik/Mesh?include_prereleases&sort=semver&label=release)](https://github.com/AyushPramanik/Mesh/releases)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
 **Git wasn't built for agents.** If you're running more than three AI agents
 against the same repo, you've already hit the wall: clones everywhere, CI queues
 saturated, and "conflict-free" merges that quietly break because two agents
