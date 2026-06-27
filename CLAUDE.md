@@ -229,7 +229,7 @@ make build
 | Area | Files |
 |---|---|
 | Workspace lifecycle | `internal/workspace/manager.go`, `internal/git/worktree.go` |
-| Conflict detection | `internal/conflict/predictor.go`, `internal/conflict/graph.go` |
+| Conflict detection | `internal/conflict/predictor.go`, `internal/conflict/graph.go`, `internal/conflict/parser.go`, `internal/conflict/languages.go` |
 | PR queue + merge train | `internal/queue/queue.go`, `internal/queue/train.go` |
 | gRPC server | `internal/daemon/server.go`, `proto/mesh/v1/mesh.proto` |
 | SQLite schema | `internal/store/schema.sql`, `internal/store/queries/` |
@@ -259,7 +259,8 @@ with integration tests validating the contract the next depends on:
 2. ✅ `internal/store` — SQLite schema + sqlc for workspace and queue tables
 3. ✅ `internal/workspace` — workspace manager using (1) and (2)
 4. ✅ `cmd/mesh` + `cmd/meshd` — CLI and daemon
-5. ✅ `internal/conflict` — file-level overlap **and** Go `go/ast` symbol-graph detection
+5. ✅ `internal/conflict` — file-level overlap **and** multi-language symbol-graph
+   detection (Go via `go/ast`; Python/JS/TS/Java/Rust/Ruby via pure-Go heuristic parsers)
 6. ✅ `internal/queue` — PR queue with GitHub REST submission and backoff
 7. ✅ `proto/` + gRPC wiring — typed agent protocol; CLI and MCP server are clients
 8. ✅ Merge train scheduler over file footprints, plus local train landing
@@ -267,9 +268,14 @@ with integration tests validating the contract the next depends on:
 
 Known gaps / next up:
 
-- **Multi-language AST** — conflict detection is Go-only today (`go/ast`). The Tree-sitter
-  generalisation to 50+ languages (see the tech-stack table) is not built yet; it reuses the
-  `SymbolGraph` shape in `internal/conflict/graph.go`.
+- **Tree-sitter parse fidelity** — multi-language conflict detection ships today via a
+  pluggable parser registry (`internal/conflict/parser.go`): Go uses a real `go/ast` parse,
+  while Python/JS/TS/Java/Rust/Ruby use pure-Go heuristic parsers (declaration-pattern
+  matching after comment/string stripping — `internal/conflict/languages.go`). This keeps the
+  no-CGO, single-static-binary, cross-compile invariants. The tech-stack table's Tree-sitter
+  backend is the next fidelity upgrade: it can replace any language behind the `symbolParser`
+  interface — and reuses the same `SymbolGraph` shape — without touching callers. Add a new
+  heuristic language by appending one `langSpec` to `heuristicLangs`.
 - **Native merge-queue integration** — trains land locally; GitHub merge-queue submission is
   wired for PRs but not yet driving the train end-to-end.
 - **Hosted tier** — Postgres backend and multi-repo/multi-user SaaS are design-only.

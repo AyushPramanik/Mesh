@@ -3,25 +3,22 @@ package conflict
 import (
 	"context"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
-	"strings"
 )
 
-// SymbolGraph summarises a branch's Go changes at the symbol level: the
-// top-level symbols whose definitions the branch touches, and the symbols the
-// branch references. Comparing two branches' graphs surfaces the conflicts file
-// overlap misses — the "silent semantic conflict" where two agents edit
-// different files but one defines a symbol the other depends on (CLAUDE.md
-// "Conflict graph": dependency and structural conflicts).
+// SymbolGraph summarises a branch's changes at the symbol level: the top-level
+// symbols whose definitions the branch touches, and the symbols the branch
+// references. Comparing two branches' graphs surfaces the conflicts file overlap
+// misses — the "silent semantic conflict" where two agents edit different files
+// but one defines a symbol the other depends on (CLAUDE.md "Conflict graph":
+// dependency and structural conflicts).
 //
-// This first cut uses Go's own parser (pure Go, no CGO) and is Go-only; the
-// Tree-sitter generalisation to other languages reuses the same graph shape.
-// References are collected heuristically without full type resolution, so the
-// signal is a strong hint, not a proof — consistent with intents being
-// best-effort predictions.
+// The graph shape is language-agnostic: each file is parsed by the parser
+// registered for its extension (see parser.go). Go is parsed precisely with the
+// standard library AST; other languages use pure-Go heuristic parsers. In every
+// case references are collected without full type resolution, so the signal is a
+// strong hint, not a proof — consistent with intents being best-effort
+// predictions.
 type SymbolGraph struct {
 	// Defines holds top-level symbol names the branch declares (and so may be
 	// changing): funcs, methods, types, vars, consts.
@@ -43,58 +40,20 @@ const (
 	kindDependency = "dependency"
 )
 
-// BuildSymbolGraph parses the Go files in files (keyed by path) and merges them
-// into one graph. Non-Go paths and files that fail to parse are skipped, so a
-// partial or mid-edit branch still yields a usable graph.
+// BuildSymbolGraph parses the files in files (keyed by path) and merges them
+// into one graph. Each file is dispatched to the parser registered for its
+// extension; files in unsupported languages and files that fail to parse are
+// skipped, so a partial or mid-edit branch still yields a usable graph.
 func BuildSymbolGraph(files map[string][]byte) SymbolGraph {
 	graph := SymbolGraph{Defines: map[string]struct{}{}, Refs: map[string]struct{}{}}
 	for path, src := range files {
-		if !strings.HasSuffix(path, ".go") {
+		parser, ok := parserForPath(path)
+		if !ok {
 			continue
 		}
-		mergeFile(&graph, src)
+		parser.parse(&graph, src)
 	}
 	return graph
-}
-
-func mergeFile(graph *SymbolGraph, src []byte) {
-	file, err := parser.ParseFile(token.NewFileSet(), "", src, 0)
-	if err != nil {
-		return
-	}
-
-	// defSites are the identifiers that are definition names, so they are not
-	// also counted as references.
-	defSites := map[*ast.Ident]struct{}{}
-	for _, decl := range file.Decls {
-		switch d := decl.(type) {
-		case *ast.FuncDecl:
-			graph.Defines[d.Name.Name] = struct{}{}
-			defSites[d.Name] = struct{}{}
-		case *ast.GenDecl:
-			for _, spec := range d.Specs {
-				switch s := spec.(type) {
-				case *ast.TypeSpec:
-					graph.Defines[s.Name.Name] = struct{}{}
-					defSites[s.Name] = struct{}{}
-				case *ast.ValueSpec:
-					for _, name := range s.Names {
-						graph.Defines[name.Name] = struct{}{}
-						defSites[name] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-
-	ast.Inspect(file, func(n ast.Node) bool {
-		if id, ok := n.(*ast.Ident); ok {
-			if _, isDef := defSites[id]; !isDef {
-				graph.Refs[id.Name] = struct{}{}
-			}
-		}
-		return true
-	})
 }
 
 // SemanticConflicts reports the symbol-level collisions between branches a and
@@ -169,7 +128,8 @@ func (a *Analyzer) Conflicts(ctx context.Context, branchA, branchB string) ([]Se
 	return SemanticConflicts(graphA, graphB), nil
 }
 
-// branchGraph reads a branch's changed Go files and builds its symbol graph.
+// branchGraph reads a branch's changed files in supported languages and builds
+// its symbol graph.
 func (a *Analyzer) branchGraph(ctx context.Context, branch string) (SymbolGraph, error) {
 	files, err := a.src.ChangedFiles(ctx, branch)
 	if err != nil {
@@ -177,7 +137,7 @@ func (a *Analyzer) branchGraph(ctx context.Context, branch string) (SymbolGraph,
 	}
 	contents := make(map[string][]byte)
 	for _, path := range files {
-		if !strings.HasSuffix(path, ".go") {
+		if !supported(path) {
 			continue
 		}
 		src, err := a.src.ReadFile(ctx, branch, path)
